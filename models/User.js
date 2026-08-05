@@ -48,6 +48,14 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    googleId: {
+      type: String,
+      default: undefined,
+    },
+    facebookId: {
+      type: String,
+      default: undefined,
+    },
   },
   {
     timestamps: true,
