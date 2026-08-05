@@ -7,9 +7,21 @@ const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 
-connectDB();
+const dbReady = connectDB();
+dbReady.catch(() => {}); // نمنع تحذير unhandled rejection، الخطأ بيتعالج في الـ middleware تحت
 
 const app = express();
+
+// بيتأكد إن الاتصال بقاعدة البيانات خلص (أو فشل برسالة واضحة)
+// قبل ما يكمل لأي route - بدل ما الطلب يعلّق 10 ثواني من غير أي رسالة.
+app.use(async (req, res, next) => {
+  try {
+    await dbReady;
+    next();
+  } catch (err) {
+    res.status(503).json({ success: false, message: 'Database connection failed. Please try again shortly.' });
+  }
+});
 
 const clientUrls = (process.env.CLIENT_URL || '*')
   .split(',')
