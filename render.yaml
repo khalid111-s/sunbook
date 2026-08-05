@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: sunbook-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: CLIENT_URL
+        value: "*"
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRE
+        value: 30d
+      - key: PAYMOB_API_KEY
+        value: your_paymob_api_key
+      - key: PAYMOB_INTEGRATION_ID
+        value: your_paymob_integration_id
+      - key: PAYMOB_IFRAME_ID
+        value: your_paymob_iframe_id
+      - key: JITSI_DOMAIN
+        value: meet.jit.si
