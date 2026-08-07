@@ -1,0 +1,4686 @@
+
+body, html {
+    overflow-x: clip; /* بيمنع الشاشة تتحرك يمين وشمال */
+    width: 100%;
+    background-color: #030406; 
+}
+
+/* --- تعريف المتغيرات لتسهيل تعديل الألوان والخطوط لاحقاً --- */
+:root {
+    --bg-dark: #030406;      
+    --gold-color: #d8b056;   
+    --text-gray: #c4c4c4;    
+    --text-dark: #111111;    
+    --font-logo: 'Times New Roman', serif; 
+    --font-main: 'Segoe UI', sans-serif;   
+
+    /* =========================================
+       الخطوط المرنة (Fluid Typography)
+       ========================================= */
+    /* للعناوين الضخمة (زي اسم المنتج في صفحة التفاصيل) */
+    --text-xl: clamp(2rem, 5vw + 1rem, 3rem);  
+    
+    /* لعناوين الأقسام (زي Best Offers و Policies) */
+    --text-lg: clamp(1.6rem, 4vw, 2.5rem); 
+    
+    /* لعناوين الكروت (زي اسم الكتاب جوه الكارت) */
+    --text-md: clamp(1.1rem, 2vw + 0.5rem, 1.4rem); 
+    
+    /* للنصوص العادية (زي الوصف والفقرات) */
+    --text-base: clamp(0.95rem, 1.5vw, 1.1rem); 
+    
+    /* للنصوص الصغيرة (زي البادجات والأسعار الصغيرة) */
+    --text-sm: clamp(0.75rem, 1vw + 0.2rem, 0.9rem); 
+}
+
+/* --- تصفير إعدادات المتصفح الافتراضية --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-dark);
+    font-family: var(--font-main);
+}
+
+/* تنسيق الـ Header الأساسي */
+.header {
+    background-color: var(--bg-dark);
+    border-bottom: 1px solid rgba(216, 176, 86, 0.1);
+    padding: 15px 0; 
+    z-index: 1000; 
+    width: 100%; 
+    /* التعديل هنا: حددنا الحاجات اللي بتعمل أنيميشن بس عشان نمنع أي جليتش */
+    transition: background-color 0.3s ease, padding 0.3s ease, box-shadow 0.3s ease; 
+}
+
+/* الكلاس اللي هيشتغل وقت السكرول */
+.header.scrolled {
+    position: fixed; 
+    top: 0;
+    left: 0;
+    padding: 10px 0; 
+    background-color: rgba(3, 4, 6, 0.75); 
+    backdrop-filter: blur(12px); 
+    -webkit-backdrop-filter: blur(12px); 
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); 
+    border-bottom: 1px solid rgba(216, 176, 86, 0.3); 
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* التعديل هنا: خلينا العرض ياخد الشاشة كلها وشلنا الـ max-width */
+    width: 100%; 
+    /* مسافة أمان صغيرة جداً (20 بيكسل) عشان اللوجو والزراير مايلزقوش في حرف الشاشة بالظبط */
+    padding: 0 20px; 
+}
+
+/* --- السنترة المثالية لكل قسم --- */
+.logo {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    gap: 8px;
+}
+
+.checkout-page-header {
+    justify-content: center;
+    display: flex;
+}
+
+.logo-flex-none {
+    flex: none;
+}
+
+.checkout-page-section {
+    padding-top: 40px;
+    min-height: 85vh;
+}
+
+.checkout-submit-btn {
+    width: 100%;
+    height: 55px;
+}
+
+.checkout-success-content {
+    max-width: 600px;
+    padding: 40px;
+    text-align: center;
+    flex-direction: column;
+    align-items: center;
+}
+
+.auth-action-row {
+    text-align: right;
+}
+
+.auth-submit-btn {
+    width: 100%;
+    height: 50px;
+    font-size: 1.1rem;
+    border: none;
+    margin-top: 5px;
+}
+
+.contact-page-section {
+    padding-top: 50px;
+}
+
+.contact-page-subtitle {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.about-intro {
+    text-align: center;
+}
+
+.about-hero-icon {
+    width: 80px;
+    margin-bottom: 20px;
+}
+
+.about-story-text {
+    font-size: 1.2rem;
+    margin-bottom: 30px;
+}
+
+.about-mission-title {
+    font-size: 1.8rem;
+}
+
+.footer-links-row {
+    gap: 20px;
+}
+
+.promo-banner {
+    background-color: var(--gold-color);
+    color: #111;
+    text-align: center;
+    padding: 10px 20px;
+    font-weight: bold;
+    font-size: 0.95rem;
+    font-family: var(--font-main);
+}
+
+.promo-banner-link {
+    color: #111;
+    text-decoration: underline;
+    margin-left: 10px;
+}
+
+.hero-visual {
+    opacity: 1;
+    transform: none;
+}
+
+.section-divider-spacing {
+    margin: 50px 0;
+}
+
+.section-plain {
+    opacity: 1;
+    transform: none;
+}
+
+.section-centered {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* مسافات قسم الحجز عشان ما يلزقش في حواف الموبايل */
+.booking-cta-section {
+    padding: 40px 5% 80px;
+    background-color: var(--bg-dark);
+}
+
+.booking-card-shell {
+    display: flex;
+    background: #131313;
+    border: 1px solid rgba(216, 176, 86, 0.2);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+}
+
+.booking-card-left {
+    flex: 0 0 320px;
+    background: radial-gradient(circle at center, rgba(216, 176, 86, 0.06), #0a0a0a 70%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    border-right: 1px solid rgba(216, 176, 86, 0.08);
+}
+
+.booking-card-icon {
+    width: 200px;
+    height: 200px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 20px rgba(216, 176, 86, 0.1));
+}
+
+.booking-card-right {
+    flex: 1;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.booking-card-title {
+    color: #d8b056;
+    font-family: 'Times New Roman', serif;
+    font-size: 1.7rem;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+}
+
+.booking-card-feature {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #c4c4c4;
+    font-size: 0.95rem;
+}
+
+.booking-slot-pill {
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.25);
+    font-size: 0.8rem;
+    cursor: not-allowed;
+}
+
+.booking-slot-pill--active {
+    border: 1px solid rgba(216, 176, 86, 0.35);
+    color: #d8b056;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: transparent;
+}
+
+.booking-slot-pill--active:hover {
+    background: rgba(216,176,86,0.08);
+}
+
+.booking-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 18px;
+    border-top: 1px solid rgba(216, 176, 86, 0.1);
+}
+
+.booking-card-link {
+    color: #c4c4c4;
+    text-decoration: none;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 0.3s;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.booking-card-link:hover {
+    color: #d8b056;
+}
+
+.booking-card-button {
+    background: transparent;
+    color: #d8b056;
+    border: 2px solid #d8b056;
+    padding: 10px 28px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s;
+    font-family: 'Segoe UI', sans-serif;
+    cursor: pointer;
+}
+
+.booking-card-button:hover {
+    background: #d8b056;
+    color: #111;
+}
+
+/* فكرة تالتة: الأيقونة بقت زخرفة خلفية شفافة خلف المحتوى (زي الشمس اللي في خلفية الموقع)
+   بدل ما تاخد عمود لوحدها. الكارت بقى بلوك واحد عريض، والمحتوى ياخد العرض كله */
+@media (max-width: 700px) {
+    .booking-card-shell {
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .booking-card-left {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 240px;
+        height: 240px;
+        padding: 0;
+        border: none;
+        opacity: 0.15;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .booking-card-icon {
+        width: 100%;
+        height: 100%;
+    }
+
+    .booking-card-right {
+        flex: 1;
+        min-width: 0;
+        padding: 22px 18px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .booking-card-title {
+        font-size: 1.15rem;
+        margin-bottom: 12px;
+    }
+
+    .booking-card-feature {
+        font-size: 0.8rem;
+    }
+
+    .booking-slot-pill {
+        padding: 5px 8px;
+        font-size: 0.7rem;
+    }
+
+    .booking-card-footer {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .booking-card-button {
+        padding: 8px 18px;
+        font-size: 0.85rem;
+    }
+
+    .booking-slot-row {
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px !important;
+    }
+
+    .booking-slot-label {
+        width: auto !important;
+        font-size: 0.8rem;
+    }
+}
+
+.footer-plain {
+    opacity: 1;
+    transform: none;
+}
+
+.logo-text {
+    color: var(--gold-color);
+    font-family: var(--font-logo);
+    font-size: 1.6rem;
+    letter-spacing: 1.5px;
+}
+
+.logo-icon {
+    height: 70px; /* اضبط هذا الرقم حسب حجم أيقونة الشمس اللي هتقصها */
+    width: auto;
+}
+
+/* --- تنسيق الـ Navbar الأساسي --- */
+.navbar {
+    display: flex;
+    align-items: center;
+    width: 100%; 
+    padding: 0 20px; 
+}
+
+/* --- تقسيم المساحات لـ 3 أجزاء متساوية --- */
+
+/* 1. اللوجو بياخد التلت ويزق محتواه شمال */
+.logo {
+    flex: 1; 
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; 
+    text-decoration: none;
+    gap: 0px;
+}
+
+/* 2. البحث بياخد التلت ويسنتر محتواه في النص */
+.search-wrapper {
+    flex: 1; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 3. الزراير بتاخد التلت وتزق محتواها يمين */
+.nav-actions {
+    flex: 1; 
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; 
+    gap: 30px;
+}
+
+/* تنسيق السلة */
+.cart-container {
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.cart-icon {
+    width: 24px;
+    height: 24px;
+    color: var(--text-gray);
+    transition: color 0.3s ease;
+}
+
+.cart-container:hover .cart-icon {
+    color: var(--gold-color);
+}
+
+.cart-badge {
+    position: absolute;
+    top: -8px;
+    right: -10px;
+    background-color: var(--gold-color);
+    color: var(--text-dark);
+    font-size: 0.75rem;
+    font-weight: bold;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* تنسيق الزر الذهبي */
+.btn-shop {
+    background-color: var(--gold-color);
+    color: var(--text-dark);
+    text-decoration: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.btn-shop:hover {
+    background-color: #e5c36a;
+    transform: translateY(-2px);
+}
+
+/* --- زر الموبايل (مخفي في الشاشات الكبيرة) --- */
+.mobile-toggle {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+}
+
+.mobile-toggle .bar {
+    width: 25px;
+    height: 3px;
+    background-color: var(--gold-color);
+    border-radius: 3px;
+}
+
+/* --- التوافق مع شاشات الموبايل (Responsive Layout) --- */
+@media (max-width: 850px) {
+    .nav-links {
+        display: none; /* هنخفي القائمة مؤقتاً في الموبايل لحد ما نبرمجها تفتح وتقفل بالـ JS */
+    }
+
+    .mobile-toggle {
+        display: flex;
+    }
+
+    /* بدل ما اللوجو/السيرش/الأزرار ياخدوا تلت الشاشة بالتساوي (اللي كان بيكسر اللوجو)،
+       اللوجو والأزرار ياخدوا حجمهم الطبيعي بس، والسيرش ياخد المساحة اللي فاضلة ويتقلص بمرونة */
+    .navbar {
+        justify-content: space-between;
+    }
+
+    .logo {
+        flex: none;
+        white-space: nowrap;
+    }
+
+    /* السيرش بيتمركز في نص المساحة الفاضية بين اللوجو والأزرار، مش نص الشاشة بالظبط،
+       عشان المسافة تبقى متساوية من الجهتين حتى لو اللوجو أعرض من زرايرالسلة/الهمبرجر */
+    .search-wrapper {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        min-width: 0;
+        padding: 0 10px;
+    }
+
+    .nav-actions {
+        flex: none;
+        gap: 15px;
+    }
+    
+    .btn-shop {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+    
+    .logo-text {
+        font-size: 1.2rem;
+    }
+    
+    .logo-icon {
+        height: 40px; /* كانت متسيبة 70px زي الديسكتوب بالغلط، وده اللي كان بيكسر السطر */
+    }
+}
+
+/* --- شاشات الموبايل الضيقة أكتر (تليفونات عادية) --- */
+@media (max-width: 480px) {
+    .navbar {
+        padding: 0 10px;
+    }
+
+    .logo {
+        gap: 2px;
+    }
+
+    .logo-icon {
+        height: 23px;
+    }
+
+    .logo-text {
+        font-size: 0.74rem;
+        letter-spacing: 0.2px;
+    }
+
+    .search-wrapper {
+        padding: 0 6px;
+        min-width: 0;
+    }
+
+    .nav-actions {
+        gap: 14px;
+        align-items: center;
+    }
+
+    .cart-container {
+        align-items: center;
+    }
+
+    .cart-icon {
+        width: 21px;
+        height: 21px;
+    }
+
+    .cart-badge {
+        width: 16px;
+        height: 16px;
+        font-size: 0.65rem;
+        top: -6px;
+        right: -8px;
+    }
+
+    .mobile-toggle {
+        margin-left: 0 !important;
+        gap: 4px;
+        align-self: center;
+    }
+
+    .mobile-toggle .bar {
+        width: 21px;
+        height: 2.5px;
+    }
+}
+
+/* --- تنسيق شريط البحث (معدل ليتناسب مع الألوان) --- */
+.search-wrapper {
+    flex: 1; /* عشان ياخد المساحة اللي في النص ويفضل متسنتر */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.search-container {
+    position: relative;
+    width: 100%;
+    max-width: 350px; /* أقصى عرض لشريط البحث */
+    border-radius: 50px;
+    background: rgba(255, 255, 255, 0.03); /* لون شفاف خفيف جداً */
+    border: 1px solid rgba(216, 176, 86, 0.2); /* إطار ذهبي خفيف */
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+/* تأثير التوهج الذهبي لما تدوس على شريط البحث */
+.search-container:focus-within {
+    border-color: var(--gold-color);
+    box-shadow: 0 0 15px rgba(216, 176, 86, 0.15);
+}
+
+.input {
+    padding: 8px 15px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--gold-color); /* لون الكتابة ذهبي */
+    font-size: 16px;
+}
+
+.input:focus {
+    outline: none;
+}
+
+.input::placeholder {
+    color: rgba(216, 176, 86, 0.5); /* لون الـ placeholder */
+}
+
+.search__icon {
+    color: var(--gold-color); /* <-- ده اللي كان ناقص */
+    width: 35px;
+    aspect-ratio: 1;
+    border-left: 1px solid rgba(216, 176, 86, 0.3);
+    padding-left: 10px;
+    margin-right: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search__icon:hover {
+    border-left: 2px solid var(--gold-color);
+}
+
+/* نخلي الـ stroke دهبي عشان الـ SVG بتستخدم stroke مش fill */
+.search__icon svg {
+    stroke: var(--gold-color);
+}
+
+/* الأوفررايد الفعلي بتاع شريط البحث في الموبايل (بعد كل التعريفات الأساسية فوق دي
+   عشان محدش يلغيه زي ما كان بيحصل قبل كده) */
+@media (max-width: 480px) {
+    .search-wrapper {
+        padding: 0 6px;
+        min-width: 0;
+    }
+
+    .search-container {
+        max-width: 200px; /* السيرش بقى ممدود أكتر وباين كله */
+        padding: 3px;
+        border-radius: 40px;
+    }
+
+    .input {
+        padding: 5px 8px;
+        font-size: 13px;
+        min-width: 0;
+    }
+
+    .search__icon {
+        width: 28px;
+        height: 28px;
+        aspect-ratio: auto;
+        padding-left: 6px;
+        padding-right: 4px;
+        margin-right: 0;
+        flex-shrink: 0;
+    }
+
+    .search__icon svg {
+        width: 15px;
+        height: 15px;
+    }
+}
+
+/* --- تنسيق القسم الأساسي الجديد --- */
+.hero-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 90px);
+    padding: 40px 5% 60px;
+    background: radial-gradient(circle at top, rgba(216, 176, 86, 0.12), transparent 45%), #000;
+}
+
+.hero-visual {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 620px;
+    margin-top: -90px;
+    margin-bottom: 0;
+}
+
+.hero-image {
+    width: min(100%, 480px);
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.45));
+}
+
+.hero-caption {
+    margin-top: 0;
+    color: var(--gold-color);
+    font-size: 1.15rem;
+    line-height: 1.2;
+    max-width: 480px;
+    font-family: var(--font-main);
+    text-shadow: 0 0 8px rgba(216, 176, 86, 0.2);
+    position: relative;
+    top: 0;
+    margin-top: -35px;
+}
+
+/* --- التوافق مع شاشات الموبايل لـ Hero Section --- */
+@media (max-width: 950px) {
+    .hero-section {
+        justify-content: center;
+        text-align: center;
+        padding: 20px 5% 30px;
+        min-height: auto;
+        background: radial-gradient(circle at top, rgba(216, 176, 86, 0.15), transparent 55%), #000;
+    }
+
+    .hero-visual {
+        margin-top: 8px;
+    }
+
+    .hero-image {
+        width: min(100%, 360px);
+    }
+
+    .hero-caption {
+        margin-top: -8px;
+        font-size: 1rem;
+    }
+
+    .main-title {
+        font-size: 2.4rem;
+    }
+}
+/* --- تنسيق زر الشراء الجديد --- */
+.button {
+  --width: 150px; 
+  --height: 48px; 
+  --tooltip-height: 35px;
+  --tooltip-width: 90px;
+  --gap-between-tooltip-to-button: 18px;
+  --button-color: var(--gold-color); /* لون الزرار ذهبي */
+  --tooltip-color: var(--bg-dark); /* لون التولتيب كحلي غامق */
+  width: var(--width);
+  height: var(--height);
+  background: var(--button-color);
+  position: relative;
+  text-align: center;
+  border-radius: 6px;
+  font-family: var(--font-main);
+  transition: background 0.3s;
+  display: inline-block;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* المربع اللي بيظهر فوق الزرار (Tooltip) */
+.button::before {
+  position: absolute;
+  content: attr(data-tooltip);
+  width: var(--tooltip-width);
+  height: var(--tooltip-height);
+  background-color: var(--tooltip-color);
+  font-size: 0.9rem;
+  color: var(--gold-color); 
+  border: 1px solid var(--gold-color); 
+  border-radius: .25em;
+  line-height: var(--tooltip-height);
+  bottom: calc(var(--height) + var(--gap-between-tooltip-to-button) + 10px);
+  left: calc(50% - var(--tooltip-width) / 2);
+}
+
+/* السهم الصغير بتاع الـ Tooltip */
+.button::after {
+  position: absolute;
+  content: '';
+  width: 0;
+  height: 0;
+  border: 10px solid transparent;
+  border-top-color: var(--gold-color); 
+  left: calc(50% - 10px);
+  bottom: calc(100% + var(--gap-between-tooltip-to-button) - 10px);
+}
+
+.button::after, .button::before {
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.5s;
+}
+
+.text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button-wrapper, .text, .icon {
+  overflow: hidden;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  color: var(--text-dark); /* لون الكلمة والأيقونة أسود عشان تقرأ على الذهبي */
+}
+
+.text {
+  top: 0;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.text, .icon {
+  transition: top 0.5s;
+}
+
+.icon {
+  top: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* الحركات عند الوقوف بالماوس */
+.button:hover {
+  background: #e5c36a; 
+}
+
+.button:hover .text {
+  top: -100%;
+}
+
+.button:hover .icon {
+  top: 0;
+}
+
+.button:hover:before, .button:hover:after {
+  opacity: 1;
+  visibility: visible;
+}
+
+.button:hover:after {
+  bottom: calc(var(--height) + var(--gap-between-tooltip-to-button) - 20px);
+}
+
+.button:hover:before {
+  bottom: calc(var(--height) + var(--gap-between-tooltip-to-button));
+}
+
+/* --- التوافق مع شاشات الموبايل --- */
+@media (max-width: 950px) {
+    .hero-section {
+        justify-content: center;
+        text-align: center;
+        padding: 20px 5% 30px;
+        min-height: auto;
+        background: radial-gradient(circle at top, rgba(216, 176, 86, 0.15), transparent 55%), #000;
+    }
+
+    .hero-visual {
+        margin-top: 8px;
+    }
+
+    .hero-image {
+        width: min(100%, 360px);
+    }
+
+    .hero-caption {
+        margin-top: -8px;
+        font-size: 1rem;
+    }
+
+    .main-title {
+        font-size: 2.4rem;
+    }
+}
+
+/* =========================================
+   تنسيقات الخط الفاصل بين الأقسام
+   ========================================= */
+.elegant-section-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0 5%;
+    margin-top: 0px;
+    margin-bottom: 10px;
+    background-color: #030406;
+    position: relative;
+    z-index: 10;
+    overflow: hidden;
+}
+
+.second-divider {
+    margin-top: -10px;
+    margin-bottom: 20px;
+    padding-bottom: 0;
+}
+
+/* الخطين الأساسيين */
+.divider-line-left,
+.divider-line-right {
+    flex: 1;
+    height: 1px;
+    background: #030406;
+}
+
+/* تدرج لوني بيخلي الخط الشمال يبدأ شفاف وينتهي دهبي */
+.divider-line-left {
+    background: linear-gradient(to right, transparent, rgba(212, 175, 55, 0.2) 40%, rgba(212, 175, 55, 0.6) 100%);
+}
+
+/* تدرج لوني بيخلي الخط اليمين يبدأ دهبي وينتهي شفاف */
+.divider-line-right {
+    background: linear-gradient(to left, transparent, rgba(212, 175, 55, 0.2) 40%, rgba(212, 175, 55, 0.6) 100%);
+}
+
+/* الحاوية بتاعت الأيقونات اللي في النص */
+.divider-center-icon {
+    display: flex;
+    align-items: center;
+    gap: 2px; /* المسافة بين الشمس والنقطتين */
+    padding: 0 15px;
+    color: var(--gold-color); /* أخدنا اللون الدهبي من المتغيرات بتاعتك */
+}
+
+/* فاصل مخصص قبل الفوتر */
+.footer-divider {
+    margin-top: 50px;
+    margin-bottom: 0;
+    padding: 10px 5% 0;
+    background: transparent;
+}
+
+.footer-divider .divider-line-left,
+.footer-divider .divider-line-right {
+    height: 1px;
+}
+
+.footer-divider .divider-center-icon {
+    padding: 0 12px;
+}
+
+/* النقطتين المفرغين اللي على الأطراف */
+.hollow-dot {
+    width: 6px;
+    height: 6px;
+    border: 1px solid var(--gold-color);
+    border-radius: 50%;
+    background-color: #030406;
+}
+
+/* الدايرة اللي جواها الشمس */
+.sun-emblem {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.sun-emblem img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+/* =========================================
+   تنسيقات قسم (Best Sellers)
+   ========================================= */
+
+.best-sellers-section,
+.best-offers-section,
+.all-products-section { /* ضفنا القسم هنا عشان ياخد مسافة الـ 5% من الجوانب ومايلزقش */
+    background-color: #030406;
+    padding: 20px 5% 70px;
+    margin-top: -10px;
+    color: #fff;
+    font-family: var(--font-main); /* شيلنا خط أريال عشان يمشي مع ستايل الموقع */
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* --- عنوان القسم --- */
+.section-header {
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+.gold-icon {
+    color: #c5a059;
+}
+
+.section-title {
+    font-family: 'Times New Roman', serif; 
+    font-size: var(--text-lg); /* استخدام الخط المرن */
+    color: #d4af37;
+    margin-bottom: 10px;
+}
+
+.section-subtitle {
+    color: #aaa;
+    font-size: 1rem;
+}
+
+/* --- شبكة المنتجات --- */
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 أعمدة متساوية */
+    gap: 20px;
+}
+
+.products-grid.two-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.products-grid.three-columns {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+/* =========================================
+   تصميم الكروت الجديد (مستوحى من الصورة بألوان The Sun Book)
+   ========================================= */
+.product-card {
+    display: flex;
+    flex-direction: column;
+    background: #131313; /* خلفية الكارت سوداء */
+    border: 1px solid rgba(216, 176, 86, 0.2); /* إطار ذهبي خفيف */
+    border-radius: 20px; /* دوران خفيف زي الصورة */
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    min-height: 480px; /* عشان الكروت تبقى قد بعض */
+}
+
+.product-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 30px rgba(216, 176, 86, 0.15); /* توهج ذهبي عند الوقوف */
+    border-color: rgba(216, 176, 86, 0.5);
+}
+
+/* 1. الجزء العلوي (الصورة والخلفية) */
+.card-image-wrapper {
+    /* تدرج لوني دائري بيدي إضاءة ذهبية خفيفة ورا الكتاب زي اللي ورا الكوتشي */
+    background: radial-gradient(circle at center, rgba(216, 176, 86, 0.1), #131313 80%);
+    height: 240px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding: 20px;
+    border-bottom: 1px solid rgba(216, 176, 86, 0.1);
+}
+
+.card-img {
+    max-width: 85%;
+    max-height: 95%;
+    object-fit: contain;
+    filter: drop-shadow(0 15px 15px rgba(0,0,0,0.7));
+    transition: transform 0.3s ease;
+}
+
+.product-card:hover .card-img {
+    transform: scale(1.08); /* زووم خفيف للكتاب */
+}
+
+
+/* 2. الجزء السفلي (التفاصيل) */
+.card-info-wrapper {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    background: #1a1a1a; /* لون أفتح سيكا من الجزء اللي فوق عشان يفصل بينهم بشياكة */
+}
+
+.card-title {
+    color: var(--gold-color);
+    font-size: var(--text-md); /* استخدام الخط المرن */
+    margin-bottom: 12px;
+    font-family: var(--font-logo); 
+}
+
+/* البادجات (زي EU38 اللي في الصورة بس للكتب) */
+.card-badges {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.badge {
+    font-size: 0.7rem;
+    color: var(--text-gray);
+    border: 1px solid rgba(216, 176, 86, 0.3);
+    padding: 4px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.card-desc {
+    color: var(--text-gray);
+    font-size: var(--text-base); /* استخدام الخط المرن */
+    line-height: 1.6;
+    margin-bottom: 25px;
+    flex: 1; 
+}
+
+/* 3. شريط السعر والزرار (منسوخين من تصميم الصورة بالظبط بس بألوانك) */
+.card-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.price-block {
+    display: flex;
+    flex-direction: column;
+}
+
+.price-label {
+    font-size: 0.65rem;
+    color: rgba(216, 176, 86, 0.7);
+    margin-bottom: 4px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.price-amount {
+    font-size: 1.4rem;
+    color: #fff;
+    font-weight: bold;
+}
+
+/* زرار الشراء المودرن */
+.add-to-cart-new {
+    background: var(--gold-color);
+    color: #111;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+}
+
+.add-to-cart-new:hover {
+    background: #e5c36a;
+    transform: translateY(-2px);
+}
+
+/* =========================================
+   تنسيقات الفوتر (التصميم المودرن)
+   ========================================= */
+.footer {
+    background-color: #020203;
+    padding: 40px 5% 20px;
+    color: var(--text-gray);
+    font-family: var(--font-main);
+    margin-top: 50px;
+}
+
+/* توزيع الجزء العلوي لـ 3 أقسام متساوية */
+.footer-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px; /* مسافة قبل السياسات اللي تحت */
+}
+
+.footer-left {
+    flex: 1;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.footer-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+.footer-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end; /* بيزق الصندوق كله لليمين */
+}
+
+/* إصلاح مساحة الضغط للوجو في الفوتر */
+.footer-logo {
+    flex: initial; /* بيلغي التمدد اللي كان جاي من الهيدر */
+    width: fit-content; /* بيخلي مساحة الضغط على قد الاسم والأيقونة بالظبط */
+}
+
+.footer-center .footer-title {
+    width: 100%;
+    max-width: 350px; /* كده الكلمة هتاخد نفس عرض صندوق الإيميل بالظبط */
+    text-align: center; /* كده هتتسنتر في النص فوق الصندوق مباشرة */
+}
+/* ده الصندوق الجديد اللي بيسنتر العنوان فوق الأيقونات */
+.social-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center; 
+    gap: 15px;
+}
+
+/* الجزء السفلي (السياسات بالعرض) */
+.footer-bottom-modern {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px; /* زودنا المسافة عشان تدي براح للخط الفاصل */
+    width: 100%;
+    margin-top: 20px;
+}
+
+.policy-row {
+    list-style: none;
+    display: flex;
+    gap: 40px; /* المسافة بين كل سياسة والتانية */
+    padding: 0;
+    margin: 0;
+}
+
+.policy-row a {
+    color: var(--gold-color); /* اللون بقى دهبي ثابت */
+    text-decoration: none;
+    font-size: 0.95rem;
+    transition: opacity 0.3s ease;
+}
+
+.policy-row a:hover {
+    opacity: 0.8; /* عملتلك تأثير شفافية خفيف أوي عشان يبان إنه لينك بيتداس عليه من غير ما لونه يتغير */
+}
+
+.promo-banner-link {
+    color: #111;
+    text-decoration: underline;
+    margin-left: 10px;
+}
+
+.inline-link-clean {
+    text-decoration: none;
+    display: inline-block;
+}
+
+.page-hero-icon {
+    width: 80px;
+    margin-bottom: 20px;
+    opacity: 0.8;
+}
+
+.page-section-stack {
+    margin-bottom: 30px;
+}
+
+.page-content-block {
+    color: rgba(255,255,255,0.4);
+    font-size: 0.85rem;
+    margin-top: -10px;
+    margin-bottom: 20px;
+}
+
+.sticky-product-gallery {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 120px;
+    align-self: flex-start;
+    height: max-content;
+}
+
+.contact-info-block {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.contact-info-icon {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.contact-info-title {
+    color: #fff;
+    margin-bottom: 5px;
+    font-size: 1.1rem;
+}
+
+.contact-info-copy {
+    color: var(--text-gray);
+    line-height: 1.5;
+}
+
+.form-submit-btn {
+    width: 100%;
+    margin-top: 10px;
+    height: 50px;
+}
+
+.profile-page-section {
+    padding-top: 50px;
+}
+
+.profile-settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.profile-settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.profile-settings-heading {
+    color: var(--gold-color);
+    margin-bottom: 15px;
+    font-family: var(--font-logo);
+    font-size: 1.1rem;
+}
+
+.profile-inline-note {
+    color: var(--text-gray);
+    font-size: 0.85rem;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.profile-phone-wrapper {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(216, 176, 86, 0.3);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.profile-country-code {
+    padding: 12px;
+    color: var(--gold-color);
+    font-weight: bold;
+    border-right: 1px solid rgba(216, 176, 86, 0.2);
+    background: rgba(216, 176, 86, 0.05);
+}
+
+.profile-phone-input {
+    border: none;
+    background: transparent;
+    flex: 1;
+    margin: 0;
+    outline: none;
+    padding: 12px 15px;
+}
+
+.profile-checkbox-label {
+    color: var(--text-gray);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.profile-checkbox-label input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--gold-color);
+}
+
+.profile-divider {
+    border: 0;
+    height: 1px;
+    background: rgba(216, 176, 86, 0.2);
+    margin: 5px 0;
+}
+
+.profile-save-btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.1rem;
+    margin-top: 10px;
+}
+
+.copyright {
+    width: 100%;
+    text-align: center;
+    border-top: 1px solid rgba(216, 176, 86, 0.2);
+    padding-top: 20px;
+    font-size: 0.85rem;
+    color: var(--gold-color); /* السطر ده هيخلي اللون ذهبي */
+    opacity: 1; /* خليناها 1 بدل 0.7 عشان اللون يبقى ساطع وواضح */
+}
+
+/* تنسيق النشرة البريدية (Newsletter) */
+.newsletter-form {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 350px;
+}
+
+.newsletter-form input {
+    flex: 1;
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(216, 176, 86, 0.2);
+    border-radius: 50px; /* خليناها مدورة عشان تليق مع السيرش اللي فوق */
+    color: #fff;
+    outline: none;
+}
+
+.newsletter-form input:focus {
+    border-color: var(--gold-color);
+}
+
+.newsletter-form button {
+    padding: 10px 20px;
+    background: var(--gold-color);
+    color: var(--text-dark);
+    border: none;
+    border-radius: 50px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.newsletter-form button:hover {
+    background: #e5c36a;
+    transform: translateY(-2px);
+}
+
+/* =========================================
+   تنسيقات السوشيال ميديا (بالعرض وأنيميشن)
+   ========================================= */
+ul.social-row {
+    list-style: none;
+    display: flex;         /* السطر ده هو اللي بيخليهم جنب بعض بالعرض */
+    justify-content: flex-start;
+    align-items: center;
+    gap: 15px;             /* مسافة بين الأيقونات من غير ما ياخدوا مساحة كبيرة */
+    padding: 0;
+    margin: 0;
+}
+
+.social-row .icon-content {
+    position: relative;
+}
+
+/* تنسيق المربع اللي بيظهر (Tooltip) */
+.social-row .icon-content .tooltip {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #fff;
+    color: #000;
+    padding: 6px 10px;
+    border-radius: 5px;
+    opacity: 0;
+    visibility: hidden;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    font-weight: bold;
+    white-space: nowrap; /* عشان الكلام ميتكسرش على سطرين */
+    z-index: 10;
+}
+
+.social-row .icon-content:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+    top: -45px; /* بيطلع لفوق شوية بشياكة */
+}
+
+/* تنسيق الدواير بتاعت الأيقونات */
+.social-row .icon-content .link {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.05); /* خلفية شفافة تليق مع الدارك مود */
+    border: 1px solid rgba(216, 176, 86, 0.2); /* إطار ذهبي خفيف */
+    transition: all 0.3s ease-in-out;
+}
+
+.social-row .icon-content .link svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+/* التأثيرات والألوان لما تقف عليهم بالماوس */
+.social-row .icon-content .link:hover {
+    box-shadow: 0px 5px 15px rgba(216, 176, 86, 0.15); /* توهج خفيف */
+    transform: translateY(-3px); /* نطة خفيفة لفوق */
+}
+
+/* كل برنامج بياخد لونه المميز لما تقف عليه */
+.social-row .icon-content .link[data-social="facebook"]:hover { color: #1877F2; border-color: #1877F2; }
+.social-row .icon-content .link[data-social="instagram"]:hover { color: #E4405F; border-color: #E4405F; }
+.social-row .icon-content .link[data-social="youtube"]:hover { color: #FF0000; border-color: #FF0000; }
+.social-row .icon-content .link[data-social="tiktok"]:hover { color: #00f2fe; border-color: #00f2fe; }
+
+/* ريسپونسف للشاشات الصغيرة */
+@media (max-width: 992px) {
+    .products-grid { grid-template-columns: repeat(2, 1fr); }
+    .products-grid.three-columns { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 576px) {
+    /* كل الشبكات (Best Offers و All Products) بقت عمودين جنب بعض على الموبايل بدل عمود واحد،
+       زي ما الديسكتوب بيعمل بس بعمودين مكان الـ3-4 */
+    .products-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .products-grid.three-columns { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .search-filter-bar { flex-direction: column; }
+    .filter-dropdown select { width: 100%; }
+
+    .products-grid.two-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 0 4px; /* هامش أمان بسيط جوه القسم عشان الكروت متلزقش في حواف الشاشة */
+    }
+
+    .product-card {
+        min-height: auto; /* بلاش نجبر ارتفاع 480px ثابت على الموبايل */
+        border-radius: 14px;
+    }
+
+    .card-image-wrapper {
+        height: 110px;
+        padding: 10px;
+    }
+
+    .card-info-wrapper {
+        padding: 12px;
+    }
+
+    .card-title {
+        font-size: 0.9rem;
+        margin-bottom: 6px;
+    }
+
+    .card-desc {
+        margin-bottom: 10px;
+        font-size: 0.75rem;
+        line-height: 1.4;
+        /* بلاش الوصف الطويل يمد الكارت لتحت أوي، نكتفي بسطرين وبعدين "..." */
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .card-badges {
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+
+    .badge {
+        font-size: 0.6rem;
+        padding: 2px 6px;
+    }
+
+    .card-bottom {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .price-amount {
+        font-size: 1rem;
+    }
+
+    .add-to-cart-new {
+        padding: 7px 12px;
+        font-size: 0.75rem;
+        width: 100%;
+    }
+}
+
+/* تنسيق العناوين اللي رجعناها */
+.footer-title {
+    color: var(--gold-color);
+    font-size: 1.2rem;
+    font-family: var(--font-logo);
+    letter-spacing: 1px;
+}
+
+/* تعديل عشان العناوين تترص صح فوق الفورم والأيقونات */
+.footer-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* دي اللي هتسنتر الحاوية كلها بالمللي في النص */
+    gap: 15px;
+}
+
+.footer-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* دي بتزق السوشيال ميديا والعنوان لليمين */
+    gap: 15px;
+}
+
+/* ريسپونسف للفوتر على الشاشات الصغيرة */
+@media (max-width: 900px) {
+    .footer-top {
+        flex-direction: column;
+        gap: 30px;
+    }
+    .footer-left, .footer-center, .footer-right {
+        justify-content: center;
+        align-items: center; /* عشان تتسنتر في النص على الموبايل */
+        width: 100%;
+    }
+    .policy-row {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+    }
+}
+
+/* =========================================
+   تنسيقات صفحة السياسات (Policies Page)
+   ========================================= */
+.policies-section {
+    padding: 60px 5% 100px;
+    background-color: var(--bg-dark);
+    min-height: 70vh;
+}
+
+.policies-content {
+    max-width: 900px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(216, 176, 86, 0.15);
+    border-radius: 12px;
+    padding: 50px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.policy-block {
+    margin-bottom: 20px;
+}
+
+.policy-title {
+    color: var(--gold-color);
+    font-family: var(--font-logo);
+    font-size: var(--text-lg); /* استخدام الخط المرن */
+    margin-bottom: 25px;
+    letter-spacing: 1px;
+}
+
+.policy-text {
+    color: var(--text-gray);
+    font-size: var(--text-base); /* استخدام الخط المرن */
+    line-height: 1.8;
+    margin-bottom: 15px;
+    font-family: var(--font-main);
+}
+
+.policy-text strong {
+    color: var(--gold-color);
+}
+
+/* فاصل مصغر جوا البوكس بتاع السياسات */
+.inline-divider {
+    margin: 40px 0;
+    padding: 0;
+}
+
+/* ريسبونسف للشاشات الصغيرة */
+@media (max-width: 768px) {
+    .policies-content {
+        padding: 30px 20px;
+    }
+    .policy-title {
+        font-size: 1.8rem;
+    }
+}
+
+/* ضبط أماكن ومسافات الفواصل داخل صفحة السياسات */
+.policies-content .elegant-section-divider {
+    background-color: transparent !important;
+    margin: 40px auto !important; /* مسافة متساوية من فوق ومن تحت وتسنتر في النص */
+    width: 80% !important;        /* بنخلي عرض الفاصل أصغر شوية من البوكس عشان يدي شكل فخم ومنمق */
+}
+
+/* ضبط تدرج الخطوط الجانبية للفاصل جوه صفحة السياسات */
+.policies-content .divider-line-left {
+    background: linear-gradient(to right, transparent, rgba(212, 175, 55, 0.2) 40%, rgba(212, 175, 55, 0.6) 100%) !important;
+}
+
+.policies-content .divider-line-right {
+    background: linear-gradient(to left, transparent, rgba(212, 175, 55, 0.2) 40%, rgba(212, 175, 55, 0.6) 100%) !important;
+}
+
+/* --- التوافق مع شاشات الموبايل لصفحة السياسات --- */
+@media (max-width: 768px) {
+    .policies-content {
+        padding: 20px 15px;
+    }
+    
+    .policy-title {
+        font-size: 1.6rem;
+        text-align: center;
+    }
+    
+    .policy-text {
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+    
+    /* تصغير عرض الفاصل شوية على الموبايل عشان يبقى شكله منمق */
+    .policies-content .elegant-section-divider {
+        width: 100% !important;
+        margin: 25px auto !important;
+    }
+}
+
+/* رفع محتويات الفوتر العليا وحدها لفوق مع الحفاظ على مساحة الفاصل */
+.footer .footer-top {
+    transform: translateY(-40px); /* ارفع الرقم أو قلله حسب المسافة اللي تعجبك بالظبط */
+}
+
+/* =========================================
+   تنسيقات صفحة تفاصيل المنتج (Single Product)
+   ========================================= */
+.single-product-section {
+    padding: 60px 5% 100px;
+    background-color: var(--bg-dark);
+    min-height: 70vh;
+}
+
+.single-product-container {
+    display: flex;
+    gap: 50px;
+    max-width: 1100px;
+    margin: 0 auto;
+    align-items: center; /* بيخلي الصورة والكلام متسنترين قصاد بعض */
+}
+
+/* =========================================
+   تنسيقات صفحة تفاصيل المنتج (Single Product) اللي اتمسحت بالغلط
+   ========================================= */
+
+/* جزء الصورة */
+.product-gallery {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(216, 176, 86, 0.15);
+    border-radius: 12px;
+    padding: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.product-gallery img {
+    max-width: 100%;
+    max-height: 450px;
+    object-fit: contain;
+    filter: drop-shadow(0 15px 25px rgba(0,0,0,0.6));
+}
+
+/* جزء التفاصيل */
+.product-info-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.product-title-large {
+    color: var(--gold-color);
+    font-family: var(--font-logo);
+    font-size: var(--text-xl); /* استخدام الخط المرن للعناوين الضخمة */
+    line-height: 1.2;
+}
+
+.product-price-large {
+    color: #fff;
+    font-size: 1.8rem;
+    font-weight: bold;
+}
+
+.product-description p {
+    color: var(--text-gray);
+    font-size: var(--text-base); /* استخدام الخط المرن */
+    line-height: 1.8;
+}
+
+/* زراير الشراء والكمية */
+.purchase-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+/* تظبيط ارتفاع العداد في صفحة المنتج عشان يبقى نفس طول الزرار */
+.purchase-actions .modern-qty {
+    height: 50px; 
+}
+
+/* زرار Add to Cart الكبير (متعدل عشان يشبه كروت الصفحة الرئيسية) */
+.add-to-cart-large {
+    flex: 1; 
+    font-size: 1.1rem;
+    height: 50px; /* توحيد الارتفاع مع العداد */
+    cursor: pointer;
+    background-color: #131313; /* نفس لون خلفية الزرار في الكروت */
+    color: var(--gold-color); /* لون الخط ذهبي */
+    border: 2px solid var(--gold-color); /* إطار ذهبي زي الكروت */
+    font-weight: bold;
+    border-radius: 6px; /* خلينا الدوران 6 بيكسل عشان يتماشى مع العداد بالظبط */
+    transition: 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.add-to-cart-large:hover {
+    background-color: var(--gold-color); /* الخلفية تنور ذهبي لما تقف عليها */
+    color: #111111; /* الخط يقلب غامق عشان يتقري كويس */
+    transform: translateY(-2px); /* نطة خفيفة لفوق */
+}
+
+/* ريسبونسف للموبايل: الصورة بقت شمال صغيرة والتفاصيل يمين (زي الديسكتوب بالظبط بس مصغّر)
+   بدل ما الصورة تكون فوق والكلام تحت وتفضل تنزل مع السكرول عادي زي ما كانت */
+@media (max-width: 850px) {
+    .single-product-container {
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .product-gallery {
+        flex: 0 0 120px;
+        padding: 10px;
+        position: sticky;
+        top: 90px; /* دلوقتي الصورة فعلاً بتفضل ثابتة وانت بتسكرول في الوصف اللي جنبها */
+    }
+
+    .product-gallery img {
+        max-height: 100px;
+    }
+
+    .product-info-details {
+        min-width: 0; /* عشان النص يتقلص صح جوه العمود الضيق ومايطلعش برّه */
+        gap: 12px;
+    }
+
+    .product-title-large {
+        font-size: 1.15rem;
+    }
+
+    .product-price-large {
+        font-size: 1.3rem;
+    }
+
+    .purchase-actions {
+        flex-wrap: wrap;
+    }
+}
+
+/* =========================================
+   تنسيقات صفحة سلة المشتريات (Cart Page)
+   ========================================= */
+.cart-section {
+    padding: 50px 5% 100px;
+    background-color: var(--bg-dark);
+    min-height: 70vh;
+}
+
+.cart-page-title {
+    color: var(--gold-color);
+    font-family: var(--font-logo);
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+    text-align: center;  /* <-- ضيف السطر ده */
+}
+
+.cart-layout {
+    display: flex;
+    flex-direction: row;
+    gap: 40px;
+    align-items: flex-start; /* مهم جداً: بدل center */
+    width: 100%;
+}
+
+.cart-items-wrapper {
+    flex: 2;           /* ياخد ضعف مساحة الـ Summary */
+    min-width: 0;      /* يمنع overflow */
+    display: flex;
+    flex-direction: column;
+}
+
+.cart-items-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.cart-item {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(216, 176, 86, 0.15);
+    border-radius: 12px;
+    padding: 20px;
+    gap: 20px;
+    transition: border-color 0.3s;
+}
+
+.cart-item:hover {
+    border-color: rgba(216, 176, 86, 0.4);
+}
+
+.cart-item-img {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));
+}
+
+.cart-item-info {
+    flex: 1;
+}
+
+.cart-item-title {
+    color: #fff;
+    font-size: 1.2rem;
+    margin-bottom: 5px;
+}
+
+.cart-item-price {
+    color: var(--gold-color);
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.cart-item-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 15px;
+}
+
+.cart-qty {
+    width: 60px;
+    padding: 5px;
+    height: 35px;
+}
+
+.remove-btn {
+    background: transparent;
+    border: none;
+    color: #ff4d4d;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: opacity 0.3s;
+}
+
+.remove-btn:hover {
+    opacity: 0.7;
+}
+
+/* إصلاح ملخص الحساب */
+.cart-summary {
+    flex: 1;
+    align-self: flex-start; /* يلزق فوق */
+    position: sticky;
+    top: 100px;             /* يفضل ثابت أثناء التمرير */
+    height: max-content;    /* يخلي الارتفاع على قد المحتوى */
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--gold-color);
+    border-radius: 12px;
+    padding: 30px;
+}
+
+.summary-title {
+    color: var(--gold-color);
+    font-size: 1.5rem;
+    margin-bottom: 25px;
+    font-family: var(--font-logo);
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-gray);
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+}
+
+.summary-divider {
+    border: 0;
+    height: 1px;
+    background: rgba(216, 176, 86, 0.2);
+    margin: 20px 0;
+}
+
+.total-row {
+    color: #fff;
+    font-size: 1.3rem;
+    font-weight: bold;
+}
+
+.total-row span:last-child {
+    color: var(--gold-color);
+}
+
+.checkout-btn {
+    width: 100%;
+    margin-top: 20px;
+    font-size: 1.1rem;
+    padding: 15px;
+    border: none;
+}
+
+/* ريسبونسف للكارت */
+@media (max-width: 900px) {
+    .cart-layout {
+        flex-direction: column;
+    }
+    .cart-summary {
+        position: static; /* نشيل الـ sticky في الموبايل */
+        width: 100%;
+    }
+    .cart-items-wrapper {
+        width: 100%;
+    }
+}
+
+/* =========================================
+   تنسيقات الإضافات الجديدة في سلة المشتريات
+   ========================================= */
+
+/* 2. حقل البرومو كود */
+.promo-code-container {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+}
+.promo-input {
+    flex: 1;
+    padding: 12px 15px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(216, 176, 86, 0.3);
+    border-radius: 6px;
+    color: #fff;
+    outline: none;
+    font-size: 0.9rem;
+    transition: border-color 0.3s;
+}
+.promo-input:focus {
+    border-color: var(--gold-color);
+    border-style: solid;
+}
+.promo-input::placeholder {
+    color: rgba(216, 176, 86, 0.4);
+}
+.apply-btn {
+    background: transparent;
+    color: var(--gold-color);
+    border: 1px solid var(--gold-color);
+    padding: 0 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+.apply-btn:hover {
+    background: var(--gold-color);
+    color: var(--text-dark);
+}
+
+/* =========================================
+   تصميم عداد الكمية المودرن (Modern Quantity)
+   ========================================= */
+
+/* 1. إخفاء الأسهم الافتراضية الرخمة من المتصفح */
+.modern-qty input[type=number]::-webkit-inner-spin-button,
+.modern-qty input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.modern-qty input[type=number] {
+    -moz-appearance: textfield; /* عشان متصفح فايرفوكس */
+}
+
+/* 2. تصميم الصندوق الخارجي */
+.modern-qty {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(216, 176, 86, 0.3); /* إطار دهبي خفيف */
+    border-radius: 6px;
+    overflow: hidden;
+    width: 120px;
+    height: 40px;
+}
+
+/* 3. تصميم زراير الزائد والناقص */
+.qty-btn {
+    background: transparent;
+    color: var(--gold-color);
+    border: none;
+    width: 40px;
+    height: 100%;
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: background 0.3s, color 0.3s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.qty-btn:hover {
+    background: var(--gold-color);
+    color: var(--text-dark);
+}
+
+/* 4. تصميم مربع الرقم في النص */
+.qty-input-val {
+    flex: 1;
+    width: 100%;
+    text-align: center;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: bold;
+    outline: none;
+}
+
+/* =========================================
+   نظام الإشعارات المودرن (Toast Notification)
+   ========================================= */
+#toast-container {
+    position: fixed;
+    bottom: 30px;
+    left: 30px; 
+    z-index: 99999; /* التعديل هنا: زودنا 9 عشان يبقى أعلى من النافذة العايمة */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.custom-toast {
+    background: rgba(3, 4, 6, 0.95);
+    border: 1px solid var(--gold-color);
+    color: #fff;
+    padding: 15px 25px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+    transform: translateX(-120%); 
+    animation: slideInLeft 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards, 
+               fadeOutLeft 0.5s 5.5s forwards; /* التعديل هنا: زودنا وقت الاختفاء لـ 5.5 ثواني */
+}
+
+/* تنسيقات حالة التنبيه أو الخطأ (جديد) */
+.custom-toast.error-toast {
+    border-color: #ff4d4d; /* إطار أحمر للتنبيه */
+}
+
+.custom-toast.error-toast .animated-check path,
+.custom-toast.error-toast .animated-check circle,
+.custom-toast.error-toast .animated-check line {
+    stroke: #ff4d4d; /* لون الأيقونة أحمر */
+    animation: none; /* بنوقف أنيميشن الرسم عشان دي أيقونة ثابتة */
+    stroke-dasharray: 0;
+    stroke-dashoffset: 0;
+}
+
+@keyframes slideInLeft {
+    to { transform: translateX(0); }
+}
+
+@keyframes fadeOutLeft {
+    to { opacity: 0; transform: translateX(-120%); }
+}
+
+/* باقي كود علامة الصح زي ما هو */
+.animated-check {
+    width: 28px;
+    height: 28px;
+}
+.animated-check path,
+.animated-check circle,
+.animated-check line {
+    fill: none;
+    stroke: var(--gold-color);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+/* أنيميشن علامة الصح بس */
+.custom-toast:not(.error-toast) .animated-check path {
+    stroke-dasharray: 50;
+    stroke-dashoffset: 50;
+    animation: drawCheck 0.6s ease 0.2s forwards;
+}
+@keyframes drawCheck {
+    to { stroke-dashoffset: 0; }
+}
+
+/* =========================================
+   زرار الواتساب العايم (Floating WhatsApp)
+   ========================================= */
+.whatsapp-float {
+    position: fixed;
+    bottom: 30px;
+    right: 30px; /* بدلناها لـ right عشان يروح يمين */
+    width: 60px;
+    height: 60px;
+    background-color: var(--bg-dark);
+    color: var(--gold-color);
+    border: 2px solid var(--gold-color);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
+    animation: pulse-gold 2s infinite;
+}
+
+.whatsapp-float:hover {
+    background-color: var(--gold-color);
+    color: var(--text-dark);
+    transform: scale(1.1) translateY(-5px);
+    animation: none;
+    box-shadow: 0 8px 25px rgba(216, 176, 86, 0.4);
+}
+
+@keyframes pulse-gold {
+    0% {
+        box-shadow: 0 0 0 0 rgba(216, 176, 86, 0.5);
+    }
+    70% {
+        box-shadow: 0 0 0 15px rgba(216, 176, 86, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(216, 176, 86, 0);
+    }
+}
+
+@media (max-width: 768px) {
+    .whatsapp-float {
+        width: 50px;
+        height: 50px;
+        bottom: 20px;
+        right: 20px; /* عدلناها هنا كمان للموبايل */
+    }
+    .whatsapp-float svg {
+        width: 26px;
+        height: 26px;
+    }
+}
+
+/* =========================================
+   تنسيقات قسم الحجز (Booking Section)
+   ========================================= */
+.booking-section {
+    padding: 60px 5% 100px;
+    background-color: var(--bg-dark);
+    min-height: 70vh;
+}
+
+.booking-content {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* الكارت الرئيسي للحجز */
+.booking-card {
+    display: flex;
+    background: #131313; /* خلفية داكنة */
+    border: 1px solid rgba(216, 176, 86, 0.2); /* إطار ذهبي */
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+    margin-bottom: 40px;
+}
+
+/* الجزء الأيسر: الصورة */
+.booking-image-wrapper {
+    flex: 0 0 350px; /* عرض ثابت للصورة */
+    background: radial-gradient(circle at center, rgba(216, 176, 86, 0.1), #0a0a0a);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.booking-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+    filter: drop-shadow(0 10px 15px rgba(0,0,0,0.8));
+}
+
+/* الجزء الأيمن: التفاصيل */
+.booking-details {
+    flex: 1;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+}
+
+.booking-title {
+    color: var(--gold-color);
+    font-size: 1.8rem;
+    font-family: var(--font-logo);
+    margin-bottom: 20px;
+}
+
+.booking-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.info-item-small {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-gray);
+    font-size: 1rem;
+}
+
+.info-item-small svg {
+    width: 18px;
+    height: 18px;
+    color: var(--gold-color);
+}
+
+/* اختيار الأوقات (Time Slots) */
+.time-slots-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.time-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.time-label {
+    width: 80px;
+    color: var(--text-gray);
+    font-weight: bold;
+}
+
+.slots-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* زراير الأوقات */
+.slot-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: transparent;
+}
+
+/* حالات زراير الأوقات */
+.slot-btn[disabled] {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.3);
+    cursor: not-allowed;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.slot-btn.available {
+    border: 1px solid var(--gold-color);
+    color: var(--gold-color);
+}
+
+.slot-btn.available:hover {
+    background: rgba(216, 176, 86, 0.1);
+}
+
+.slot-btn.selected {
+    background: var(--gold-color);
+    color: #111;
+    border: 1px solid var(--gold-color);
+}
+
+/* شريط الإجراءات (الزرار واللينك) */
+.booking-action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto; /* يزق الشريط لآخر الكارت */
+    padding-top: 20px;
+    border-top: 1px solid rgba(216, 176, 86, 0.1);
+}
+
+.view-details-link {
+    color: var(--text-gray);
+    text-decoration: none;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 0.3s;
+}
+
+.view-details-link:hover {
+    color: var(--gold-color);
+}
+
+.view-details-link span {
+    transition: transform 0.3s;
+}
+
+.view-details-link:hover span {
+    transform: translateX(5px); /* حركة السهم */
+}
+
+/* تعديل زرار الحجز الجديد */
+.book-now-btn {
+    background-color: #030406; /* لون أسود زي خلفية الموقع */
+    color: var(--gold-color); /* الكلام ذهبي */
+    border: 2px solid var(--gold-color); /* إطار ذهبي يحدد الزرار */
+    padding: 12px 30px;
+    font-size: 1.1rem;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.book-now-btn:hover {
+    background-color: var(--gold-color); /* الخلفية تقلب ذهبي بالماوس */
+    color: #111; /* الكلام يقلب أسود */
+    transform: translateY(-2px); /* حركة خفيفة لفوق */
+}
+
+/* ريسبونسف للموبايل والشاشات الصغيرة */
+@media (max-width: 900px) {
+    .booking-card {
+        flex-direction: column;
+    }
+    
+    .booking-image-wrapper {
+        flex: none;
+        height: 250px;
+    }
+    
+    .booking-details {
+        padding: 25px;
+    }
+    
+    .time-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .time-label {
+        width: auto;
+    }
+    
+    .booking-action-bar {
+        flex-direction: column;
+        gap: 20px;
+        align-items: stretch;
+        text-align: center;
+    }
+}
+
+/* =========================================
+   نافذة الحجز المنبثقة (Booking Modal)
+   ========================================= */
+.booking-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(3, 4, 6, 0.85); /* خلفية معتمة */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000; /* أعلى طبقة في الموقع */
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(5px);
+}
+
+.booking-modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.booking-modal-content {
+    display: flex;
+    width: 900px;
+    max-width: 95%;
+    background: #131313;
+    border: 1px solid rgba(216, 176, 86, 0.3);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+}
+
+.booking-modal-overlay.active .booking-modal-content {
+    transform: translateY(0);
+}
+
+/* الجزء الأيسر (النتيجة) */
+.modal-left {
+    flex: 1;
+    background: #1a1a1a;
+    padding: 30px;
+    border-right: 1px solid rgba(216, 176, 86, 0.1);
+}
+
+.author-mini-profile {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* السطر ده هو اللي هيسنتر الجملة في النص بالظبط */
+    margin-bottom: 30px;
+}
+
+.timezone-info {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px; /* مسافة بين الأيقونة والكلام */
+}
+
+.author-mini-profile h3 {
+    color: #fff;
+    font-size: 1.1rem;
+}
+
+/* هيدر النتيجة (الشهر والأسهم) */
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.calendar-header h4 {
+    color: var(--gold-color);
+    font-size: 1.2rem;
+    font-family: var(--font-logo);
+}
+
+.cal-nav-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-gray);
+    cursor: pointer;
+    transition: color 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cal-nav-btn:hover { color: var(--gold-color); }
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+}
+
+.cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    font-size: 0.95rem;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cal-day:hover:not(.empty):not(.disabled) {
+    background: rgba(216, 176, 86, 0.2);
+}
+
+.cal-day.disabled {
+    color: rgba(255, 255, 255, 0.2);
+    cursor: not-allowed;
+}
+
+.cal-day.selected {
+    background: var(--gold-color);
+    color: #111;
+    font-weight: bold;
+}
+
+.cal-day.empty { cursor: default; }
+
+/* الجزء الأيمن (المواعيد) */
+.modal-right {
+    flex: 1;
+    padding: 30px;
+    position: relative;
+    background: #131313;
+}
+
+.close-modal {
+    position: absolute;
+    top: 15px; right: 15px;
+    background: transparent;
+    border: none;
+    color: var(--text-gray);
+    font-size: 1.8rem;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.close-modal:hover { color: #ff4d4d; }
+
+.meeting-details {
+    margin-bottom: 30px;
+    border-bottom: 1px solid rgba(216, 176, 86, 0.1);
+    padding-bottom: 20px;
+}
+
+.meeting-title {
+    color: #fff;
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px; /* مسافة بين الأيقونة والكلام */
+}
+
+.quantity-price {
+    display: flex;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 12px 15px;
+    border-radius: 8px;
+    color: var(--text-gray);
+    font-size: 0.95rem;
+    border: 1px solid rgba(216, 176, 86, 0.2);
+}
+
+.gold-text {
+    color: var(--gold-color);
+    font-weight: bold;
+}
+
+.time-selection h4 {
+    color: #fff;
+    margin-bottom: 5px;
+}
+
+.timezone-info {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+}
+
+.time-slots-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.time-slot-btn {
+    background: transparent;
+    border: 1px solid rgba(216, 176, 86, 0.5);
+    color: #fff;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.time-slot-btn:hover, .time-slot-btn.selected {
+    background: rgba(216, 176, 86, 0.1);
+    border-color: var(--gold-color);
+    color: var(--gold-color);
+}
+
+/* ريسبونسف للموبايل */
+@media (max-width: 800px) {
+    .booking-modal-content { height: 90vh; overflow-y: auto; width: 96%; }
+
+    /* التقويم وتفاصيل الحجز بقوا جنب بعض بالعرض زي الديسكتوب، بس بمقاسات مصغّرة عشان يتناسبوا مع عرض الموبايل */
+    .modal-left, .modal-right {
+        padding: 14px;
+    }
+
+    .modal-left {
+        border-right: 1px solid rgba(216, 176, 86, 0.1);
+        border-bottom: none;
+    }
+
+    .author-mini-profile h3 { font-size: 0.85rem; }
+    .timezone-info { font-size: 0.7rem; margin-bottom: 12px; }
+
+    .calendar-header { margin-bottom: 10px; }
+    .calendar-header h4 { font-size: 0.85rem; }
+    .cal-nav-btn svg { width: 16px; height: 16px; }
+
+    .calendar-weekdays { font-size: 0.6rem; margin-bottom: 6px; }
+    .calendar-days { gap: 3px; }
+    .cal-day { font-size: 0.65rem; }
+
+    .meeting-details { margin-bottom: 16px; padding-bottom: 12px; }
+
+    .time-slots-list { grid-template-columns: 1fr; gap: 6px; }
+    .time-slot-btn { font-size: 0.75rem; padding: 8px 6px; }
+}
+
+/* =========================================
+   إصلاح مشكلة الصورة العملاقة وتنسيق الأيقونات الذهبية
+   ========================================= */
+/* 2. تظبيط مقاس ولون أيقونات الساعة الرملية واللوكيشن */
+.gold-icon-svg {
+    width: 18px !important;
+    height: 18px !important;
+    color: var(--gold-color);
+}
+
+/* 3. سنترة الأيقونات جنب الكلام بالظبط */
+.meeting-title {
+    color: #fff;
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px; 
+}
+
+/* =========================================
+   تنسيقات زراير الـ Hero Section الجديدة
+   ========================================= */
+.hero-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 50px; /* مسافة بين الجملة والزراير */
+    justify-content: center;
+    position: relative;
+    z-index: 10;
+}
+
+/* تنسيق زرار Explore Collection الشفاف */
+.btn-outline {
+    background-color: transparent;
+    color: var(--gold-color);
+    border: 2px solid var(--gold-color);
+    text-decoration: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-outline:hover {
+    background-color: rgba(216, 176, 86, 0.1); /* خلفية شفافة ذهبية لما تقف عليه */
+    transform: translateY(-2px);
+}
+
+/* التوافق مع شاشات الموبايل للزراير دي */
+@media (max-width: 500px) {
+    .hero-buttons {
+        flex-direction: column; /* بنخليهم فوق بعض في الموبايل */
+        width: 100%;
+        max-width: 250px;
+    }
+}
+
+/* =========================================
+   تنسيقات أفاتار المستخدم (User Avatar)
+   ========================================= */
+.user-avatar {
+    width: 42px;
+    height: 42px;
+    background-color: var(--bg-dark); /* خلفية سوداء */
+    color: var(--gold-color); /* حرف ذهبي */
+    border: 2px solid var(--gold-color); /* إطار ذهبي */
+    border-radius: 50%; /* دوران كامل زي الواتس */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.2rem;
+    font-family: var(--font-logo);
+    font-weight: bold;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.user-avatar:hover {
+    background-color: var(--gold-color);
+    color: var(--text-dark); /* الحرف يقلب غامق لما تقف عليه */
+    box-shadow: 0 5px 15px rgba(216, 176, 86, 0.2);
+    transform: translateY(-2px);
+}
+
+/* =========================================
+   تنسيقات صفحة الـ Checkout 
+   ========================================= */
+.checkout-layout {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+}
+
+.checkout-form-area {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.checkout-summary-area {
+    flex: 1.2;
+    position: sticky;
+    top: 40px;
+}
+
+.checkout-box {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(216, 176, 86, 0.2);
+    border-radius: 12px;
+    padding: 30px;
+}
+
+.checkout-title {
+    color: var(--gold-color);
+    font-family: var(--font-logo);
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(216, 176, 86, 0.1);
+    padding-bottom: 10px;
+}
+
+.input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.smart-notice {
+    background: rgba(216, 176, 86, 0.1);
+    border-left: 4px solid var(--gold-color);
+    padding: 15px 20px;
+    color: #fff;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    border-radius: 4px;
+    display: none; /* مخفية لحد ما الـ JS يحدد هتظهر ولا لأ */
+}
+
+/* تابات الدفع (محفظة ولا فيزا) */
+.payment-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.pay-tab {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    border: 1px solid rgba(216, 176, 86, 0.3);
+    border-radius: 8px;
+    color: var(--text-gray);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.pay-tab.active {
+    background: rgba(216, 176, 86, 0.15);
+    border-color: var(--gold-color);
+    color: var(--gold-color);
+    font-weight: bold;
+}
+.pay-form { display: none; }
+.pay-form.active { display: block; }
+
+/* ملخص الطلب في الدفع */
+.checkout-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+.checkout-item-mini {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+.checkout-item-info {
+    flex: 1;
+    min-width: 0;
+}
+.checkout-item-price {
+    color: var(--gold-color);
+    font-weight: bold;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.checkout-item-mini img {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+    padding: 5px;
+}
+.checkout-item-mini h4 {
+    color: #fff;
+    font-size: 0.95rem;
+    margin-bottom: 5px;
+}
+.item-type-badge {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.1);
+    color: var(--gold-color);
+}
+
+@media (max-width: 850px) {
+    .checkout-layout { flex-direction: column; }
+    .input-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* =========================================
+   إصلاح مسافات حقول الـ Checkout + تنسيق الـ Select Dropdowns
+   ========================================= */
+
+/* 1. مسافات بين الحقول في Checkout */
+.checkout-box .input-grid {
+    display: grid;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.checkout-box .input-grid.two-cols {
+    grid-template-columns: 1fr 1fr;
+}
+
+.checkout-box .input-grid.three-cols {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.checkout-box .full-width-row {
+    width: 100%;
+    margin-bottom: 15px;
+    display: block;
+}
+
+/* 2. تنسيق الـ Select Dropdowns */
+.select-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.select-wrapper .custom-select {
+    width: 100%;
+    padding: 14px 40px 14px 15px; /* مسافة يمين للسهم */
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(216, 176, 86, 0.3) !important;
+    border-radius: 8px;
+    color: #fff !important;
+    font-size: 0.95rem;
+    font-family: var(--font-main);
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* لون الـ Option داخل الـ Dropdown */
+.select-wrapper .custom-select option {
+    background: #1a1a1a;
+    color: #fff;
+    padding: 10px;
+}
+
+/* الـ Placeholder option (المعطلة) */
+.select-wrapper .custom-select option:disabled {
+    color: rgba(216, 176, 86, 0.4);
+}
+
+/* Focus state */
+.select-wrapper .custom-select:focus {
+    border-color: var(--gold-color) !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    box-shadow: 0 0 12px rgba(216, 176, 86, 0.15);
+}
+
+/* Disabled state (قبل ما تختار المحافظة) */
+.select-wrapper .custom-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: rgba(216, 176, 86, 0.15) !important;
+}
+
+/* 3. السهم الذهبي الجانبي */
+.select-arrow {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: var(--gold-color);
+    pointer-events: none;
+    transition: transform 0.3s ease;
+}
+
+/* لما تفتح الـ Select السهم يقلب */
+.select-wrapper:focus-within .select-arrow {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+/* 4. ريسبونسف للموبايل: خلينا الحقول (الاسم، المحافظة/الحي) تفضل جنب بعض بعمودين زي الديسكتوب،
+   ورقم الموبايل ياخد السطر كله لوحده تحتهم عشان مساحته مايتزنقش */
+@media (max-width: 768px) {
+    .checkout-box .input-grid.two-cols,
+    .checkout-box .input-grid.three-cols {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .checkout-box .input-grid.three-cols .phone-input-wrapper {
+        grid-column: 1 / -1;
+    }
+}
+
+
+/* =========================================
+   تنسيقات إضافية لنظام الدفع الذكي
+   ========================================= */
+
+/* بنر الديجيتال فقط */
+.digital-only-banner {
+    background: linear-gradient(135deg, rgba(216, 176, 86, 0.15), rgba(216, 176, 86, 0.05));
+    border: 1px solid rgba(216, 176, 86, 0.3);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 25px;
+    animation: fadeInDown 0.5s ease;
+}
+
+.digital-only-banner svg {
+    width: 40px;
+    height: 40px;
+    color: var(--gold-color);
+    margin-bottom: 10px;
+}
+
+.digital-only-banner h4 {
+    color: var(--gold-color);
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+    font-family: var(--font-logo);
+}
+
+.digital-only-banner p {
+    color: var(--text-gray);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* أزرار التحميل في نافذة النجاح */
+.download-section-title {
+    color: var(--gold-color);
+    font-family: var(--font-logo);
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+    text-align: center;
+    border-bottom: 1px solid rgba(216, 176, 86, 0.2);
+    padding-bottom: 15px;
+}
+
+.download-btn {
+    width: 100%;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: rgba(216, 176, 86, 0.08);
+    border: 1px solid rgba(216, 176, 86, 0.4);
+    border-radius: 10px;
+    color: #fff;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.download-btn:hover {
+    background: rgba(216, 176, 86, 0.2);
+    border-color: var(--gold-color);
+    transform: translateX(5px);
+}
+
+.download-btn .dl-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.download-btn .dl-icon {
+    width: 22px;
+    height: 22px;
+    color: var(--gold-color);
+    flex-shrink: 0;
+}
+
+.download-btn .dl-badge {
+    font-size: 0.75rem;
+    border: 1px solid var(--gold-color);
+    padding: 3px 10px;
+    border-radius: 20px;
+    color: var(--gold-color);
+    white-space: nowrap;
+    transition: all 0.3s ease;
+}
+
+.download-btn.disabled-dl {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.download-btn.disabled-dl .dl-badge {
+    border-color: #ff4d4d;
+    color: #ff4d4d;
+}
+
+/* تحسين بطاقات المنتجات لعرض نوع المنتج */
+.item-type-badge {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.1);
+    display: inline-block;
+    margin-top: 5px;
+}
+
+/* رسالة النجاح المحسنة */
+#success-message {
+    color: var(--text-gray);
+    margin-bottom: 30px;
+    line-height: 1.6;
+    font-size: 1rem;
+}
+
+/* تحسين responsive للـ checkout */
+@media (max-width: 768px) {
+    .download-btn {
+        padding: 14px 15px;
+        font-size: 0.85rem;
+    }
+
+    .download-btn .dl-left {
+        gap: 8px;
+    }
+
+    .download-section-title {
+        font-size: 1.1rem;
+    }
+
+    .digital-only-banner {
+        padding: 15px;
+    }
+}
+
+/* =========================================
+   تنسيقات المواعيد المحجوزة في التقويم
+   ========================================= */
+
+/* اليوم اللي كله اتحجز */
+.cal-day.fully-booked {
+    color: rgba(255, 255, 255, 0.2);
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* الوقت المحجوز */
+.time-slot-btn.booked {
+    opacity: 0.35;
+    cursor: not-allowed;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.25);
+    text-decoration: line-through;
+    position: relative;
+}
+
+.time-slot-btn.booked::before {
+    content: 'BOOKED';
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.6rem;
+    letter-spacing: 1px;
+    color: #ff4d4d;
+    border: 1px solid rgba(255, 77, 77, 0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+.time-slot-btn.booked:hover {
+    background: transparent !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* =========================================
+   تأثيرات الظهور التدريجي عند التمرير (Scroll Reveal)
+   ========================================= */
+.reveal {
+    opacity: 0;
+    transform: translateY(40px); /* البداية: العنصر مخفي ونازل لتحت شوية */
+    transition: all 0.8s cubic-bezier(0.5, 0, 0, 1); /* حركة ناعمة ومريحة للعين */
+}
+
+.reveal.active {
+    opacity: 1;
+    transform: translateY(0); /* النهاية: العنصر بيظهر ويرجع لمكانه الطبيعي */
+}
+
+/* عشان نضمن إن الهيدر وشريط الإعلانات ميأثروش بحاجة لو خدوا الكلاس بالغلط */
+header.reveal, #promo-banner.reveal {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+}
+
+/* =========================================
+   1. تخصيص شريط التمرير (Custom Scrollbar)
+   ========================================= */
+/* عرض شريط التمرير */
+::-webkit-scrollbar {
+    width: 10px; /* شريط رفيع وأنيق */
+}
+
+/* خلفية الشريط (المسار) */
+::-webkit-scrollbar-track {
+    background: var(--bg-dark); /* نفس لون خلفية الموقع */
+}
+
+/* الجزء اللي بيتحرك (المؤشر) */
+::-webkit-scrollbar-thumb {
+    background: rgba(216, 176, 86, 0.4); /* لون ذهبي شفاف ومطفي شوية */
+    border-radius: 10px; /* دوران خفيف للحواف */
+    border: 2px solid var(--bg-dark); /* إطار أسود عشان يفصل بين المؤشر والخلفية */
+}
+
+/* المؤشر لما تقف عليه بالماوس */
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gold-color); /* ينور ذهبي صريح */
+}
+
+/* =========================================
+   2. تخصيص لون تظليل النص (Text Selection)
+   ========================================= */
+::selection {
+    background-color: var(--gold-color);
+    color: var(--text-dark); 
+}
+
+::-moz-selection { /* عشان متصفح فايرفوكس */
+    background-color: var(--gold-color);
+    color: var(--text-dark);
+}
+
+/* =========================================
+   3. التمرير الناعم للصفحة (Smooth Scrolling)
+   ========================================= */
+html {
+    scroll-behavior: smooth;
+}
+
+/* =========================================
+   تأثير التحميل الوهمي (Skeleton Loader)
+   ========================================= */
+.skeleton {
+    /* تدرج لوني بين الرمادي والذهبي الخفيف جداً */
+    background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(216, 176, 86, 0.08) 50%, rgba(255,255,255,0.03) 75%);
+    background-size: 200% 100%;
+    animation: loadingShimmer 1.5s infinite;
+    border-radius: 8px;
+}
+
+.skeleton-text { height: 15px; margin-bottom: 10px; width: 100%; }
+.skeleton-title { height: 20px; width: 60%; margin-bottom: 15px; }
+.skeleton-img { width: 100px; height: 100px; border-radius: 12px; }
+
+@keyframes loadingShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* =========================================
+   تنسيقات صفحة 404 (Not Found Page)
+   ========================================= */
+.not-found-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 65vh;
+    padding: 60px 5%;
+    background-color: var(--bg-dark);
+    text-align: center;
+}
+
+.not-found-content {
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.not-found-title {
+    color: var(--gold-color);
+    font-size: 6rem;
+    font-family: var(--font-logo);
+    margin-bottom: 5px;
+    letter-spacing: 3px;
+    text-shadow: 0 0 20px rgba(216, 176, 86, 0.2);
+}
+
+.not-found-subtitle {
+    color: #fff;
+    font-size: 1.8rem;
+    font-family: var(--font-logo);
+    margin-bottom: 20px;
+}
+
+.not-found-text {
+    color: var(--text-gray);
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 40px;
+}
+
+/* =========================================
+   تنسيقات صفحة الحساب الشخصي المتقدمة
+   ========================================= */
+
+/* شريط تتبع الشحن */
+.tracking-timeline {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px dashed rgba(216, 176, 86, 0.2);
+}
+
+.tracking-timeline::before {
+    content: '';
+    position: absolute;
+    top: 32px;
+    left: 10%;
+    width: 80%;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    z-index: 1;
+}
+
+.track-step {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.track-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #131313;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s;
+}
+
+.track-step.active {
+    color: var(--gold-color);
+}
+
+.track-step.active .track-icon {
+    border-color: var(--gold-color);
+    background: var(--gold-color);
+    box-shadow: 0 0 10px rgba(216, 176, 86, 0.4);
+}
+
+/* كروت التحميل الرقمية */
+.digital-lib-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.digital-card {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(216, 176, 86, 0.2);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.3s;
+}
+
+.digital-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--gold-color);
+}
+
+.digital-card h4 {
+    color: #fff;
+    margin: 10px 0;
+    font-family: var(--font-logo);
+}
+
+/* أزرار الجلسات */
+.session-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-join {
+    background: var(--gold-color);
+    color: var(--text-dark); /* الكلام بالأسود عشان يتقري بوضوح على الذهبي */
+    border: 2px solid var(--gold-color);
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    flex: 1;
+    transition: all 0.3s ease;
+}
+
+.btn-join:hover {
+    background: #e5c36a; /* درجة أفتح شوية لما الماوس يقف عليه */
+    border-color: #e5c36a;
+    transform: translateY(-2px); /* نطة خفيفة لفوق */
+    box-shadow: 0 5px 15px rgba(216, 176, 86, 0.2);
+}
+
+.btn-reschedule {
+    background: transparent;
+    color: var(--text-gray);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    flex: 1;
+    transition: all 0.3s;
+}
+
+.btn-reschedule:hover {
+    border-color: var(--gold-color);
+    color: var(--gold-color);
+}
+
+/* =========================================
+   نظام التنقل في الحساب الشخصي (Profile Tabs)
+   ========================================= */
+.profile-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 25px 0;
+}
+
+.profile-tab-btn {
+    background: transparent;
+    border: 1px solid rgba(216, 176, 86, 0.2);
+    color: var(--text-gray);
+    padding: 12px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: var(--font-main);
+    text-align: left;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.profile-tab-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+}
+
+.profile-tab-btn:hover, .profile-tab-btn.active {
+    background: rgba(216, 176, 86, 0.1);
+    border-color: var(--gold-color);
+    color: var(--gold-color);
+    font-weight: bold;
+}
+
+/* إخفاء الأقسام غير النشطة مع أنيميشن للظهور */
+.profile-tab-content {
+    display: none;
+    animation: fadeInTab 0.4s ease forwards;
+}
+
+.profile-tab-content.active {
+    display: block;
+}
+
+@keyframes fadeInTab {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================================
+   تأثير التحميل لزراير تسجيل الدخول
+   ========================================= */
+.spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(216, 176, 86, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--gold-color);
+    animation: spin 0.8s linear infinite;
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* --- Profile Page Styles --- */
+        .profile-wrapper {
+            display: flex;
+            gap: 30px;
+            max-width: 1100px;
+            margin: 0 auto;
+            align-items: flex-start;
+        }
+
+        .profile-sidebar {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(216, 176, 86, 0.2);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .profile-avatar-large {
+            width: 80px;
+            height: 80px;
+            background-color: var(--gold-color);
+            color: var(--text-dark);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            font-family: var(--font-logo);
+            margin: 0 auto 15px;
+            font-weight: bold;
+        }
+
+        .profile-name {
+            color: var(--gold-color);
+            font-size: 1.5rem;
+            font-family: var(--font-logo);
+            margin-bottom: 5px;
+        }
+
+        .profile-email {
+            color: var(--text-gray);
+            font-size: 0.95rem;
+            margin-bottom: 25px;
+        }
+
+        .btn-logout {
+            background: transparent;
+            color: #ff4d4d;
+            border: 1px solid #ff4d4d;
+            padding: 10px 20px;
+            border-radius: 8px;
+            width: 100%;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-logout:hover {
+            background: #ff4d4d;
+            color: #fff;
+        }
+
+        .profile-main {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .profile-section {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(216, 176, 86, 0.2);
+            border-radius: 12px;
+            padding: 30px;
+        }
+
+        .section-header-small {
+            color: var(--gold-color);
+            font-size: 1.3rem;
+            border-bottom: 1px solid rgba(216, 176, 86, 0.2);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #passwordForm {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .profile-input {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(216, 176, 86, 0.3);
+            border-radius: 8px;
+            color: #fff;
+            outline: none;
+        }
+        
+        .profile-input:focus {
+            border-color: var(--gold-color);
+        }
+
+        .history-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .history-info h4 {
+            color: #fff;
+            margin-bottom: 5px;
+        }
+        .history-info p {
+            color: var(--text-gray);
+            font-size: 0.9rem;
+        }
+        .history-status {
+            color: var(--gold-color);
+            font-weight: bold;
+            font-size: 0.9rem;
+            background: rgba(216, 176, 86, 0.1);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        /* تظبيط ريسبونسف صفحة البروفايل للموبايل */
+        @media (max-width: 850px) {
+            .profile-wrapper {
+                flex-direction: column;
+                align-items: stretch; /* السر هنا: ده اللي بيجبر الصناديق تتمدد وتاخد العرض كله */
+                gap: 20px;
+            }
+
+            .profile-sidebar, .profile-main {
+                width: 100%;
+            }
+
+            .profile-sidebar {
+                padding: 20px; /* تقليل الحواف شوية عشان تناسب شاشة الموبايل */
+            }
+
+            /* تحويل زراير القائمة لشبكة (2 جنب 2) عشان نوفر مساحة طولية */
+            .profile-menu {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                margin: 20px 0;
+            }
+
+            .profile-tab-btn {
+                flex-direction: column; /* الأيقونة فوق والكلمة تحت */
+                justify-content: center;
+                text-align: center;
+                padding: 12px 10px;
+                font-size: 0.85rem;
+                gap: 8px;
+            }
+
+            .profile-tab-btn svg {
+                margin: 0 auto;
+            }
+        }
+
+/* تظبيط ريسبونسف صفحة البروفايل للموبايل (App-like Horizontal Tabs) */
+        @media (max-width: 850px) {
+            .profile-wrapper {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 20px;
+            }
+
+            .profile-sidebar, .profile-main {
+                width: 100%;
+            }
+
+            .profile-sidebar {
+                padding: 20px;
+            }
+
+            /* السر هنا: شريط أزرار قابل للسحب بالعرض */
+            .profile-menu {
+                display: flex;
+                flex-direction: row;
+                overflow-x: auto; /* تشغيل السحب العرضي */
+                overflow-y: hidden;
+                gap: 10px;
+                margin: 20px 0;
+                padding-bottom: 8px; /* مسافة عشان السكرول مياكلش الزراير */
+                scroll-behavior: smooth;
+                -webkit-overflow-scrolling: touch; /* نعومة السحب في الآيفون */
+            }
+
+            /* إخفاء شريط التمرير عشان الشكل يفضل فخم ونظيف */
+            .profile-menu::-webkit-scrollbar {
+                display: none;
+            }
+
+            /* منع الزراير من الانكماش وتظبيط مساحتها */
+            .profile-tab-btn {
+                flex: 0 0 auto; /* الزرار يفضل محتفظ بعرضه ومينكمش */
+                flex-direction: row;
+                justify-content: center;
+                padding: 10px 18px;
+                font-size: 0.95rem;
+                white-space: nowrap; /* منع نزول الكلام على سطرين */
+            }
+
+            /* تصغير خط التتبع عشان شاشات الموبايل الصغيرة */
+            .track-step span {
+                font-size: 0.75rem; 
+            }
+        }
+
+        /* --- Login Page Styles --- */
+        /* تنسيقات صفحة تسجيل الدخول */
+        .auth-section {
+            padding: 60px 5% 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+        }
+        
+        .auth-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(216, 176, 86, 0.2);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 480px; /* عرضنا الصندوق سنة صغيرة عشان الزراير جنب بعض */
+            padding: 40px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+        }
+
+        /* نظام التبديل (Tabs) */
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(216, 176, 86, 0.2);
+        }
+        
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 0;
+            color: var(--text-gray);
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .auth-tab.active {
+            color: var(--gold-color);
+            border-bottom: 2px solid var(--gold-color);
+        }
+
+        /* الفورم */
+        .auth-form {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .auth-form.active {
+            display: flex;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 14px 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(216, 176, 86, 0.3);
+            border-radius: 8px;
+            color: #fff;
+            outline: none;
+            font-size: 0.95rem;
+            transition: border-color 0.3s, background 0.3s;
+        }
+        
+        .auth-input:focus {
+            border-color: var(--gold-color);
+            background: rgba(255, 255, 255, 0.06);
+        }
+        
+        .auth-input::placeholder {
+            color: rgba(216, 176, 86, 0.4);
+        }
+
+        /* الفاصل بتاع السوشيال ميديا */
+        .social-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 25px 0;
+            color: var(--text-gray);
+            font-size: 0.85rem;
+        }
+        
+        .social-divider::before,
+        .social-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid rgba(216, 176, 86, 0.2);
+        }
+        
+        .social-divider span {
+            padding: 0 10px;
+        }
+
+ .social-login-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* زرارين بس جنب بعض بنفس المقاس بالظبط */
+    gap: 12px;
+}
+        
+        .social-btn {
+            position: relative; /* عشان الـ overlay بتاع جوجل ياخد نفس مقاس الزرار بالظبط */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid rgba(216, 176, 86, 0.3);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .social-btn:hover {
+            background: rgba(216, 176, 86, 0.05);
+            border-color: var(--gold-color);
+        }
+        
+        /* توحيد لون الأيقونات للذهبي */
+        .social-btn svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            fill: var(--gold-color); /* السطر ده اللي بيخلي أي أيقونة لونها ذهبي */
+        }
+
+        /* زرار جوجل الحقيقي بيترسم شفاف تمامًا فوق الزرار المصمم، بنفس مقاسه بالظبط،
+           عشان أي ضغطة تفتح نافذة جوجل الحقيقية بس الشكل اللي باين هو زرارنا الموحّد */
+        .google-btn-overlay {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .google-btn-overlay > div {
+            width: 100% !important;
+        }
+
+        /* تظبيط الزراير على الموبايل عشان تنزل تحت بعض */
+        @media (max-width: 500px) {
+            .social-login-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* --- Contact Page Styles --- */
+        /* تنسيقات إضافية خاصة بصفحة التواصل عشان تظبط على الموبايل والشاشات الكبيرة */
+        .contact-wrapper {
+            display: flex;
+            gap: 50px;
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(216, 176, 86, 0.15);
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .contact-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        .contact-form-container {
+            flex: 1.2;
+        }
+        .contact-input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(216, 176, 86, 0.3);
+            border-radius: 8px;
+            color: #fff;
+            outline: none;
+            font-size: 0.95rem;
+            font-family: var(--font-main);
+            transition: border-color 0.3s;
+        }
+        .contact-input:focus {
+            border-color: var(--gold-color);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .contact-input::placeholder {
+            color: rgba(216, 176, 86, 0.4);
+        }
+        
+        @media (max-width: 768px) {
+            .contact-wrapper {
+                flex-direction: column;
+                padding: 25px;
+                gap: 40px;
+            }
+        }
+
+        /* --- Checkout Page Styles --- */
+    /* ====== OVERRIDE كل الـ inputs في صفحة الدفع ====== */
+    .checkout-form-area input[type="text"],
+    .checkout-form-area input[type="tel"],
+    .checkout-box input[type="text"],
+    .checkout-box input[type="tel"] {
+        width: 100%;
+        padding: 14px 16px;
+        background: rgba(255, 255, 255, 0.03) !important;
+        background-color: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(216, 176, 86, 0.35) !important;
+        border-radius: 8px;
+        color: #d8b056 !important;
+        font-size: 0.95rem;
+        font-family: 'Segoe UI', sans-serif;
+        outline: none;
+        transition: all 0.3s ease;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        box-sizing: border-box;
+    }
+
+    .checkout-form-area input::placeholder,
+    .checkout-box input::placeholder {
+        color: rgba(216, 176, 86, 0.4) !important;
+        opacity: 1;
+    }
+
+    .checkout-form-area input:focus,
+    .checkout-box input:focus {
+        border-color: #d8b056 !important;
+        background: rgba(255, 255, 255, 0.06) !important;
+        box-shadow: 0 0 15px rgba(216, 176, 86, 0.2);
+    }
+
+    /* --- الـ Select Dropdowns --- */
+    .checkout-box select,
+    .checkout-form-area select {
+        width: 100%;
+        padding: 14px 42px 14px 16px !important;
+        background-color: rgba(255, 255, 255, 0.03) !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d8b056' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 12px center !important;
+        background-size: 18px 18px !important;
+        border: 1px solid rgba(216, 176, 86, 0.35) !important;
+        border-radius: 8px;
+        color: #d8b056 !important;
+        font-size: 0.95rem;
+        font-family: 'Segoe UI', sans-serif;
+        cursor: pointer;
+        outline: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        box-sizing: border-box;
+    }
+
+    .checkout-box select option,
+    .checkout-form-area select option {
+        background-color: #0a0a0a !important;
+        background: #0a0a0a !important;
+        color: #d8b056 !important;
+        padding: 12px;
+        font-size: 0.95rem;
+    }
+
+    .checkout-box select option:disabled,
+    .checkout-form-area select option:disabled {
+        color: rgba(216, 176, 86, 0.5) !important;
+    }
+
+    .checkout-box select:disabled,
+    .checkout-form-area select:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+        border-color: rgba(216, 176, 86, 0.15) !important;
+    }
+
+    .checkout-box .input-grid {
+        display: grid;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .checkout-box .input-grid.two-cols {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .checkout-box .input-grid.three-cols {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .checkout-box .full-width-row {
+        width: 100%;
+        margin-bottom: 15px;
+        display: block;
+    }
+
+    #card-form .input-grid,
+    #wallet-form .input-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-top: 15px;
+    }
+
+    #card-form input,
+    #wallet-form input {
+        margin-bottom: 0;
+    }
+
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus {
+        -webkit-text-fill-color: #d8b056 !important;
+        -webkit-box-shadow: 0 0 0px 1000px #0a0a0a inset !important;
+        transition: background-color 5000s ease-in-out 0s;
+    }
+
+    @media (max-width: 768px) {
+        .checkout-box .input-grid.two-cols,
+        .checkout-box .input-grid.three-cols,
+        #card-form .input-grid,
+        #wallet-form .input-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .checkout-box .input-grid.three-cols .phone-input-wrapper {
+            grid-column: 1 / -1;
+        }
+    }
+
+    .phone-input-wrapper {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(216, 176, 86, 0.35);
+        border-radius: 8px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .phone-input-wrapper:focus-within {
+        border-color: #d8b056;
+        box-shadow: 0 0 15px rgba(216, 176, 86, 0.2);
+    }
+
+    .country-code {
+        padding: 14px 12px;
+        color: #d8b056;
+        font-weight: bold;
+        font-size: 0.95rem;
+        border-right: 1px solid rgba(216, 176, 86, 0.2);
+        background: rgba(216, 176, 86, 0.05);
+        white-space: nowrap;
+        user-select: none;
+    }
+
+    .phone-input-wrapper .phone-field {
+        border: none !important;
+        background: transparent !important;
+        flex: 1;
+        margin: 0;
+        border-radius: 0;
+    }
+
+    .phone-input-wrapper .phone-field:focus {
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    .field-error {
+        color: #ff4d4d;
+        font-size: 0.85rem;
+        margin-top: 6px;
+        display: none;
+        animation: shake 0.3s ease;
+    }
+
+    .field-error.show {
+        display: block;
+    }
+
+    input:invalid:not(:placeholder-shown),
+    select:invalid:not(:placeholder-shown) {
+        border-color: rgba(255, 77, 77, 0.5) !important;
+    }
+
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+
+    /* ====== أزرار التحميل في نافذة النجاح ====== */
+    .download-btn {
+        width: 100%;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        background: rgba(216, 176, 86, 0.08);
+        border: 1px solid rgba(216, 176, 86, 0.4);
+        border-radius: 10px;
+        color: #fff;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+
+    .download-btn:hover {
+        background: rgba(216, 176, 86, 0.2);
+        border-color: var(--gold-color);
+        transform: translateX(5px);
+    }
+
+    .download-btn .dl-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .download-btn .dl-icon {
+        width: 22px;
+        height: 22px;
+        color: var(--gold-color);
+    }
+
+    .download-btn .dl-badge {
+        font-size: 0.75rem;
+        border: 1px solid var(--gold-color);
+        padding: 3px 10px;
+        border-radius: 20px;
+        color: var(--gold-color);
+        white-space: nowrap;
+    }
+
+    .download-section-title {
+        color: var(--gold-color);
+        font-family: var(--font-logo);
+        font-size: 1.3rem;
+        margin-bottom: 20px;
+        text-align: center;
+        border-bottom: 1px solid rgba(216, 176, 86, 0.2);
+        padding-bottom: 15px;
+    }
+
+    .digital-only-banner {
+        background: linear-gradient(135deg, rgba(216, 176, 86, 0.15), rgba(216, 176, 86, 0.05));
+        border: 1px solid rgba(216, 176, 86, 0.3);
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 25px;
+    }
+
+    .digital-only-banner svg {
+        width: 40px;
+        height: 40px;
+        color: var(--gold-color);
+        margin-bottom: 10px;
+    }
+
+    .digital-only-banner h4 {
+        color: var(--gold-color);
+        font-size: 1.1rem;
+        margin-bottom: 5px;
+    }
+
+    .digital-only-banner p {
+        color: var(--text-gray);
+        font-size: 0.9rem;
+    }
+
+    /* --- book Page Styles --- */
+        /* تنسيقات إضافية بسيطة للنص عشان يظهر بشكل احترافي */
+        .booking-desc-text {
+            color: var(--text-gray);
+            font-size: 1.05rem;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+        .booking-desc-text p {
+            margin-bottom: 15px;
+        }
+        .booking-desc-text strong {
+            color: var(--gold-color);
+        }
+        .booking-desc-text ul {
+            list-style-type: disc;
+            margin-left: 20px;
+            margin-bottom: 20px;
+            color: var(--gold-color);
+        }
+        .booking-desc-text ul li span {
+            color: var(--text-gray);
+        }
+
+        /* =========================================
+   نتائج البحث المنبثقة (Search Dropdown)
+   ========================================= */
+.search-dropdown-results {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: 100%;
+    background: #131313;
+    border: 1px solid rgba(216, 176, 86, 0.3);
+    border-radius: 12px;
+    padding: 8px;
+    z-index: 1000;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+    display: none;
+    overflow: hidden;
+}
+
+/* الشريط بيبقى بنفس عرض مربع السيرش بالظبط وتحته على طول (زي ما هو افتراضيًا فوق)،
+   بس بنحط أقصى ارتفاع مع سكرول عشان القايمة الطويلة متطلعش برّه الشاشة */
+@media (max-width: 480px) {
+    .search-dropdown-results {
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+}
+
+.search-result-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.2s;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover {
+    background: rgba(216, 176, 86, 0.1);
+}
+
+.search-result-item img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border-radius: 6px;
+}
+
+.search-result-item div {
+    display: flex;
+    flex-direction: column;
+}
+
+.search-result-title {
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+@media (max-width: 480px) {
+    .search-result-item img {
+        width: 36px;
+        height: 36px;
+    }
+
+    .search-result-title {
+        font-size: 0.85rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+}
+
+.search-result-price {
+    color: var(--gold-color);
+    font-size: 0.8rem;
+}
+
+.search-no-results {
+    color: var(--text-gray);
+    text-align: center;
+    padding: 15px;
+    font-size: 0.9rem;
+}
+
+/* =========================================
+   تنسيقات صفحة التواصل (Contact Form)
+   ========================================= */
+.contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.contact-form textarea.contact-input {
+    min-height: 140px;
+    resize: vertical;
+    font-family: var(--font-main);
+}
+
+/* =========================================
+   تنسيقات قائمة الموبايل (Mobile Sidebar)
+   ========================================= */
+
+/* إخفاء القائمة الأساسية من الشاشات الكبيرة */
+.nav-links {
+    display: none; 
+}
+
+/* تنسيق زرار الموبايل (الثلاث خطوط) وتجهيزه للأنيميشن */
+.mobile-toggle {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+    z-index: 1000;
+    margin-left: 20px; 
+}
+
+.mobile-toggle .bar {
+    width: 25px;
+    height: 3px;
+    background-color: var(--gold-color);
+    border-radius: 3px;
+    transition: all 0.3s ease-in-out;
+}
+
+/* =========================================
+   نظام القائمة الجانبية للموبايل (Premium Slide-in Menu)
+   ========================================= */
+
+/* إخفاء القائمة في الشاشات الكبيرة */
+.mobile-sidebar, .sidebar-overlay {
+    display: none;
+}
+
+/* 1. تنسيق زرار الموبايل (الثلاث خطوط) - مخفي في الكمبيوتر */
+.mobile-toggle {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+    z-index: 1000;
+    margin-left: 20px; 
+}
+
+.mobile-toggle .bar {
+    width: 25px;
+    height: 3px;
+    background-color: var(--gold-color);
+    border-radius: 3px;
+    transition: all 0.3s ease-in-out;
+}
+
+/* 2. التوافق مع الموبايل (إظهار الزرار والقائمة) */
+@media (max-width: 850px) {
+    
+    /* إظهار زرار الموبايل */
+    .mobile-toggle {
+        display: flex !important;
+    }
+
+    /* التعديل هنا: هنخفي زرار الدخول بس من الهيدر الأساسي ونسيب السلة تظهر جنب الثلاث شرط */
+    .nav-actions #auth-container {
+        display: none !important;
+    }
+    
+    /* الطبقة المعتمة (Overlay) */
+    .sidebar-overlay {
+        display: block;
+        position: fixed;
+        top: 0; left: 0; 
+        width: 100%; height: 100vh;
+        background: rgba(3, 4, 6, 0.85); 
+        backdrop-filter: blur(5px); 
+        -webkit-backdrop-filter: blur(5px);
+        z-index: 2000;
+        opacity: 0; visibility: hidden;
+        transition: all 0.4s ease;
+    }
+    
+    .sidebar-overlay.active {
+        opacity: 1; visibility: visible;
+    }
+
+    /* القائمة الجانبية (Sidebar) */
+    .mobile-sidebar {
+        display: flex; flex-direction: column;
+        position: fixed;
+        top: 0; right: -320px; 
+        width: 300px; height: 100vh;
+        background: #0a0a0a; 
+        border-left: 1px solid rgba(216, 176, 86, 0.3); 
+        z-index: 2001;
+        padding: 25px;
+        box-shadow: -10px 0 40px rgba(0, 0, 0, 0.9);
+        transition: right 0.4s cubic-bezier(0.77, 0, 0.175, 1); 
+    }
+    
+    .mobile-sidebar.active {
+        right: 0; 
+    }
+
+    /* الهيدر وزرار الإغلاق */
+    .sidebar-header {
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid rgba(216, 176, 86, 0.1);
+        padding-bottom: 20px; margin-bottom: 30px;
+    }
+    
+    .sidebar-close {
+        background: transparent; border: none; color: var(--text-gray);
+        cursor: pointer; transition: color 0.3s, transform 0.3s;
+        display: flex; align-items: center; justify-content: center;
+    }
+    
+    .sidebar-close:hover { 
+        color: #ff4d4d; 
+        transform: rotate(90deg); 
+    }
+
+    /* تنسيق الروابط */
+    .sidebar-links {
+        list-style: none; padding: 0; margin: 0; 
+        display: flex; flex-direction: column; gap: 25px; flex: 1;
+    }
+    
+    /* التعديل هنا: خلينا لون الكلام الأساسي ذهبي */
+    .sidebar-links a {
+        color: var(--gold-color); 
+        text-decoration: none; font-size: 1.2rem;
+        font-weight: 500; transition: color 0.3s, padding-left 0.3s;
+        display: block;
+    }
+    
+    .sidebar-links a:hover { 
+        color: #fff; /* بيقلب أبيض لما تقف عليه */
+        padding-left: 10px; 
+    }
+
+    /* الفوتر (الدخول والحساب) */
+    .sidebar-footer {
+        display: flex; flex-direction: column; gap: 20px;
+        border-bottom: none;
+        border-top: 1px solid rgba(216, 176, 86, 0.1); 
+        padding-top: 25px;
+    }
+
+    /* التعديل هنا: تصميم الأفاتار الجديد جوه الموبايل عشان يبقى زرار عريض فخم */
+    .sidebar-footer .user-avatar {
+        width: 100%;
+        border-radius: 8px;
+        background: rgba(216, 176, 86, 0.1);
+        border: 1px solid var(--gold-color);
+        color: var(--gold-color);
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        text-decoration: none;
+        font-family: var(--font-logo);
+        font-size: 1.3rem;
+        transition: all 0.3s;
+    }
+    
+    /* إضافة كلمة My Profile جنب الحرف تلقائياً */
+    .sidebar-footer .user-avatar::after {
+        content: ' My Profile';
+        font-family: var(--font-main);
+        font-size: 1.05rem;
+        text-transform: capitalize;
+    }
+    
+    .sidebar-footer .user-avatar:hover {
+        background: var(--gold-color);
+        color: #111;
+    }
+}
+

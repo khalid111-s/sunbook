@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - The Sun Book</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/png" href="assets/sun-icon.png">
+    
+</head>
+<body>
+<div data-include="components/header.html"></div>
+
+<section class="policies-section reveal profile-page-section">
+    <div class="container">
+       <div class="profile-wrapper">
+            
+            <!-- الجزء الشمال: القائمة الجانبية -->
+            <div class="profile-sidebar">
+                <div class="profile-avatar-large" id="avatarLarge">S</div>
+                <h2 class="profile-name" id="displayName">Seeker</h2>
+                <p class="profile-email">seeker@thesunbook.com</p>
+                
+                <!-- قائمة التنقل (Tabs) -->
+                <div class="profile-menu">
+                    <button class="profile-tab-btn active" onclick="switchProfileTab('tab-orders', this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        Physical Orders
+                    </button>
+                    <button class="profile-tab-btn" onclick="switchProfileTab('tab-digital', this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                        Digital Library
+                    </button>
+                    <button class="profile-tab-btn" onclick="switchProfileTab('tab-sessions', this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        Booked Sessions
+                    </button>
+                    <button class="profile-tab-btn" onclick="switchProfileTab('tab-settings', this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09z"></path></svg>
+                        Settings
+                    </button>
+                </div>
+
+                <button class="btn-logout" onclick="logout()">Sign Out</button>
+            </div>
+
+            <!-- الجزء اليمين: الأقسام -->
+            <div class="profile-main">
+                
+                <!-- قسم 1: الطلبات -->
+                <div id="tab-orders" class="profile-tab-content active">
+                    <div class="profile-section">
+                        <div class="section-header-small"><span>Physical Orders & Tracking</span></div>
+                        <div id="ordersList"></div>
+                    </div>
+                </div>
+
+                <!-- قسم 2: المكتبة الرقمية -->
+                <div id="tab-digital" class="profile-tab-content">
+                    <div class="profile-section">
+                        <div class="section-header-small"><span>My Digital Library</span></div>
+                        <div id="digitalList" class="digital-lib-grid"></div>
+                    </div>
+                </div>
+
+                <!-- قسم 3: الجلسات -->
+                <div id="tab-sessions" class="profile-tab-content">
+                    <div class="profile-section">
+                        <div class="section-header-small"><span>Upcoming Sessions</span></div>
+                        <div id="bookingsList"></div>
+                    </div>
+                </div>
+
+                <!-- قسم 4: الإعدادات (Settings) -->
+                <div id="tab-settings" class="profile-tab-content">
+                    <div class="profile-section">
+                        <div class="section-header-small"><span>Account Settings</span></div>
+                        
+                        <form id="settingsForm" class="profile-settings-form">
+                            
+                           <!-- 1. البيانات الشخصية -->
+                            <div>
+                                <h4 class="profile-settings-heading">Personal Information</h4>
+                                <div class="profile-settings-group">
+                                    
+                                    <!-- حقل الاسم مع رسالة التحذير -->
+                                    <div>
+                                        <input type="text" id="profileNameInput" class="profile-input" placeholder="Full Name" value="Seeker" style="width: 100%;">
+                                       <p id="nameChangeWarning" class="profile-inline-note">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+    You can only change your name once every 30 days.
+</p>
+                                    </div>
+
+                                    <!-- حقل رقم التليفون بنفس ستايل الدفع -->
+                                    <div class="phone-input-wrapper profile-phone-wrapper">
+                                        <span class="country-code profile-country-code">+20</span>
+                                        <input type="tel" id="profilePhoneInput" class="profile-input phone-field profile-phone-input" placeholder="1XX XXX XXXX" maxlength="11" pattern="^01[0-2,5]{1}[0-9]{8}$" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11); if(this.value.length > 0 && !this.value.startsWith('0')) this.value = '0' + this.value;">
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            <!-- 2. عنوان الشحن الافتراضي -->
+<!-- 2. عنوان الشحن الافتراضي -->
+<div>
+    <h4 class="profile-settings-heading">Default Shipping Address</h4>
+    <input type="text" id="profileAddressInput" class="profile-input" placeholder="Street, Building, Apartment, City">
+</div>
+
+                            <!-- 3. تفضيلات الإشعارات -->
+                            <div>
+                                <h4 class="profile-settings-heading">Preferences</h4>
+                                <label class="profile-checkbox-label">
+                                    <input type="checkbox" checked>
+                                    Receive newsletter and exclusive ancient wisdom offers
+                                </label>
+                            </div>
+
+                            <hr class="profile-divider">
+
+                            <!-- 4. تغيير الباسورد -->
+                            <div>
+                                <h4 class="profile-settings-heading">Change Password</h4>
+                                <div class="profile-settings-group">
+                                    <input type="password" class="profile-input" placeholder="Current Password">
+                                    <input type="password" class="profile-input" placeholder="New Password">
+                                    <input type="password" class="profile-input" placeholder="Confirm New Password">
+                                </div>
+                            </div>
+
+                            <!-- زرار الحفظ -->
+<!-- استبدل زرار الحفظ القديم بده -->
+<button type="button" class="btn-shop profile-save-btn" onclick="saveProfileSettings()">Save All Changes</button>                            
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+</section>
+
+<div class="elegant-section-divider reveal">
+    <div class="divider-line-left"></div>
+    <div class="divider-center-icon">
+        <span class="hollow-dot"></span>
+        <div class="sun-emblem">
+            <img src="assets/sun-icon.png" alt="Sun icon" />
+        </div>
+        <span class="hollow-dot"></span>
+    </div>
+    <div class="divider-line-right"></div>
+</div>
+
+
+<!-- =========================================
+     الفوتر (التصميم الجديد المودرن - تم الإصلاح)
+     ========================================= -->
+<div data-include="components/footer.html"></div>
+
+<script src="components/loader.js"></script>
+<script src="js/script.js"></script>
+<script src="js/api.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const loggedInUser = localStorage.getItem('sunbook_username');
+        const token = localStorage.getItem('sunbook_token');
+        if (!loggedInUser || !token || token === 'social_dummy_token') {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        const displayNameEl = document.getElementById('displayName');
+        const avatarLargeEl = document.getElementById('avatarLarge');
+        if (displayNameEl) displayNameEl.innerText = loggedInUser;
+        if (avatarLargeEl) avatarLargeEl.innerText = loggedInUser.charAt(0).toUpperCase();
+
+        if (typeof loadProfileData === 'function') {
+            loadProfileData();
+        }
+
+        // فتح تاب الجلسات تلقائياً لو جاي من checkout أو في ?tab=sessions
+        const urlTab = new URLSearchParams(window.location.search).get('tab');
+        if (urlTab === 'sessions') {
+            const sessionsBtn = document.querySelector('.profile-tab-btn[onclick*="tab-sessions"]');
+            if (sessionsBtn) switchProfileTab('tab-sessions', sessionsBtn);
+        }
+    });
+
+   async function loadProfileData() {
+    
+    // ─── جلب بيانات المستخدم من الـ Backend ──────────────
+    try {
+        const { data: userData } = await api.getMe();
+        if (userData) {
+            document.getElementById('profileNameInput').value = userData.name || '';
+            document.getElementById('profilePhoneInput').value = userData.phone || '';
+            document.getElementById('profileAddressInput').value = userData.address || '';
+            document.getElementById('displayName').innerText = userData.name || 'Seeker';
+            document.getElementById('avatarLarge').innerText = (userData.name || 'S').charAt(0).toUpperCase();
+            const emailEl = document.querySelector('.profile-email');
+            if (emailEl && userData.email) emailEl.innerText = userData.email;
+        }
+    } catch(err) {
+        console.error('Failed to load user data:', err);
+        // نستمر في تحميل باقي البيانات حتى لو فشل جلب بيانات المستخدم
+    }
+
+    // ─── 1. طلبات الشحن (زي ما هي من localStorage) ─────────
+    const orders = JSON.parse(localStorage.getItem('sunbook_orders')) || [];
+    const ordersList = document.getElementById('ordersList');
+    
+    const physicalOrders = orders.filter(order => order.types && order.types.physical > 0);
+
+    if(physicalOrders.length === 0) {
+        ordersList.innerHTML = '<p style="color: var(--text-gray); text-align: center; padding: 20px 0;">No physical orders to track.</p>';
+    } else {
+        let ordersHTML = '';
+        physicalOrders.slice().reverse().forEach(order => {
+            ordersHTML += `
+            <div class="history-card" style="flex-direction: column; align-items: stretch;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="history-info">
+                        <h4>Order #${order.id}</h4>
+                        <p>Total: £${order.total} • Date: ${order.date}</p>
+                    </div>
+                    <div class="history-status">Processing</div>
+                </div>
+                <div class="tracking-timeline">
+                    <div class="track-step active"><div class="track-icon"></div><span>Placed</span></div>
+                    <div class="track-step active"><div class="track-icon"></div><span>Processing</span></div>
+                    <div class="track-step"><div class="track-icon"></div><span>Shipped</span></div>
+                    <div class="track-step"><div class="track-icon"></div><span>Delivered</span></div>
+                </div>
+            </div>`;
+        });
+        ordersList.innerHTML = ordersHTML;
+    }
+
+    // ─── 2. المكتبة الرقمية (زي ما هي من localStorage) ─────
+    const library = JSON.parse(localStorage.getItem('sunbook_library')) || [];
+    const digitalList = document.getElementById('digitalList');
+
+    if(library.length === 0) {
+        digitalList.style.display = 'block';
+        digitalList.innerHTML = '<p style="color: var(--text-gray); text-align: center; padding: 20px 0;">Your digital library is empty.</p>';
+    } else {
+        let digitalHTML = '';
+        library.slice().reverse().forEach(book => {
+            const isExhausted = book.downloadsLeft <= 0;
+            digitalHTML += `
+            <div class="digital-card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold-color)" stroke-width="2" style="width: 40px; height: 40px; margin-bottom: 10px;">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                <h4>${book.title}</h4>
+                <p style="font-size: 0.8rem; color: ${isExhausted ? '#ff4d4d' : 'var(--text-gray)'}; margin-bottom: 15px;">
+                    ${isExhausted ? 'Download Limit Reached' : book.downloadsLeft + ' Downloads left'}
+                </p>
+                <button class="btn-shop" style="width: 100%; padding: 8px; ${isExhausted ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${isExhausted ? 'disabled' : ''} onclick="alert('Downloading ${book.title}...')">
+                    Download PDF
+                </button>
+            </div>`;
+        });
+        digitalList.innerHTML = digitalHTML;
+    }
+
+    // ─── 3. الجلسات والحجوزات (من الـ Backend) ───────────────
+    const bookingsList = document.getElementById('bookingsList');
+    
+    try {
+        const [{ data: sessions }, { data: bookings }] = await Promise.all([
+            api.getMySessions(),
+            api.getMyBookings()
+        ]);
+
+        if (sessions.length === 0 && bookings.length === 0) {
+            bookingsList.innerHTML = '<p style="color: var(--text-gray); text-align: center; padding: 20px 0;">No upcoming sessions.</p>';
+        } else if (sessions.length > 0) {
+            let html = '';
+            sessions.forEach(s => {
+                const isLive = s.status === 'live' || s.status === 'scheduled';
+                const dateObj = new Date(s.scheduledDate || s.booking?.date || s.createdAt);
+                const dateStr = dateObj.toLocaleDateString('en-GB');
+                
+                html += `
+                <div class="history-card" style="flex-direction: column; align-items: stretch;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="history-info">
+                            <h4>${s.subject || s.booking?.subject || 'One-on-One Session'}</h4>
+                            <p style="color: var(--gold-color); font-weight: bold; margin-top: 8px;">${dateStr} • ${s.duration || s.booking?.duration || 30} min</p>
+                        </div>
+                        <div class="history-status" style="color: ${isLive ? '#34A853' : '#ff4d4d'}; background: ${isLive ? 'rgba(52,168,83,0.1)' : 'rgba(255,77,77,0.1)'};">${s.status}</div>
+                    </div>
+                    <div class="session-actions">
+                        ${isLive ? `
+                            <button class="btn-join" onclick="window.location.href='session.html?id=${s._id}'">Join Session</button>
+                        ` : `<button class="btn-reschedule" disabled>Completed</button>`}
+                    </div>
+                </div>`;
+            });
+            bookingsList.innerHTML = html;
+        } else {
+            let html = '';
+            bookings.forEach(b => {
+                const dateObj = new Date(b.date);
+                html += `
+                <div class="history-card" style="flex-direction: column; align-items: stretch;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="history-info">
+                            <h4>${b.subject}</h4>
+                            <p style="color: var(--gold-color); margin-top: 8px;">${dateObj.toLocaleDateString('en-GB')} • ${b.duration} min</p>
+                        </div>
+                        <div class="history-status">${b.status}</div>
+                    </div>
+                    <p style="color: var(--text-gray); font-size: 0.85rem; margin-top: 10px;">
+                        ${b.status === 'pending' ? 'Waiting for payment confirmation.' : 'Session will appear here once confirmed.'}
+                    </p>
+                </div>`;
+            });
+            bookingsList.innerHTML = html;
+        }
+
+        // افتح تاب الجلسات لو في حجوزات
+        if (sessions.length > 0 || bookings.length > 0) {
+            const sessionsBtn = document.querySelector('.profile-tab-btn[onclick*="tab-sessions"]');
+            if (sessionsBtn && !new URLSearchParams(window.location.search).get('tab')) {
+                switchProfileTab('tab-sessions', sessionsBtn);
+            }
+        }
+    } catch (err) {
+        console.error('Sessions load error:', err);
+        bookingsList.innerHTML = `<p style="color: #ff4d4d; text-align: center; padding: 20px 0;">Error loading sessions: ${err.message}</p>`;
+    }
+}
+
+    // 3. دالة تسجيل الخروج
+    function logout() {
+        localStorage.removeItem('sunbook_username');
+        localStorage.removeItem('sunbook_token');
+        localStorage.removeItem('sunbook_user_id');
+        window.location.href = 'index.html';
+    }
+
+    function switchProfileTab(tabId, btnElement) {
+        // بنخفي كل الأقسام
+        document.querySelectorAll('.profile-tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        // بنشيل اللون الذهبي من كل الزراير
+        document.querySelectorAll('.profile-tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // بنظهر القسم اللي انداس عليه وبننور زراره
+        document.getElementById(tabId).classList.add('active');
+        btnElement.classList.add('active');
+    }
+
+    // =========================================
+    // نظام حماية تغيير الاسم (محاكاة الواجهة الأمامية)
+    // =========================================
+    function checkNameChangeEligibility() {
+        const nameInput = document.getElementById('profileNameInput');
+        const warningText = document.getElementById('nameChangeWarning');
+        const lastChangeDate = localStorage.getItem('sunbook_last_name_change');
+
+        if (lastChangeDate) {
+            const lastDate = new Date(lastChangeDate);
+            const currentDate = new Date();
+            // حساب الفرق بالأيام
+            const diffTime = Math.abs(currentDate - lastDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays < 30) {
+               // لو معداش 30 يوم، نقفل الخانة ونغير الرسالة للون الدهبي مع أيقونة قفل
+                const daysLeft = 30 - diffDays;
+                nameInput.disabled = true;
+                nameInput.style.opacity = '0.5';
+                nameInput.style.cursor = 'not-allowed';
+                warningText.style.color = 'var(--gold-color)';
+                warningText.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    You recently changed your name. You can change it again in ${daysLeft} days.`;
+            }
+        }
+    }
+
+ async function saveProfileSettings() {
+    const nameInput = document.getElementById('profileNameInput');
+    const phoneInput = document.getElementById('profilePhoneInput');
+    const addressInput = document.getElementById('profileAddressInput');
+    
+    // تحقق من صحة البيانات
+    if (!nameInput.value.trim()) {
+        showToast('Name is required', 'error');
+        return;
+    }
+
+    try {
+        // حفظ البيانات في الـ Backend
+        const updateData = {
+            name: nameInput.value.trim(),
+            phone: phoneInput.value.trim() || '',
+            address: addressInput?.value.trim() || '',
+        };
+        
+        await api.updateProfile(updateData);
+        
+        // تحديث localStorage للتوافق مع النظام الحالي
+        localStorage.setItem('sunbook_username', nameInput.value.trim());
+        localStorage.setItem('sunbook_last_name_change', new Date().toISOString());
+        if (phoneInput) localStorage.setItem('sunbook_phone', phoneInput.value.trim());
+        if (addressInput) localStorage.setItem('sunbook_address', addressInput.value.trim());
+
+        showToast('Settings saved successfully!');
+        
+        // تحديث الواجهة
+        checkNameChangeEligibility();
+        document.getElementById('displayName').innerText = nameInput.value.trim();
+        document.getElementById('avatarLarge').innerText = nameInput.value.trim().charAt(0).toUpperCase();
+        
+    } catch (err) {
+        console.error('Save error:', err);
+        showToast(err.message || 'Failed to save settings', 'error');
+    }
+}
+
+   async function loadSavedSettings() {
+    try {
+        // جلب البيانات من الـ Backend
+        const { data: userData } = await api.getMe();
+        
+        if (userData) {
+            document.getElementById('profileNameInput').value = userData.name || '';
+            document.getElementById('profilePhoneInput').value = userData.phone || '';
+            // document.getElementById('profileAddressInput').value = userData.address || '';
+            
+            // تحديث الاسم المعروض
+            document.getElementById('displayName').innerText = userData.name || 'Seeker';
+            document.getElementById('avatarLarge').innerText = (userData.name || 'S').charAt(0).toUpperCase();
+        }
+        
+        // مزامنة localStorage مع البيانات القادمة من السيرفر
+        if (userData?.name) localStorage.setItem('sunbook_username', userData.name);
+        if (userData?.phone) localStorage.setItem('sunbook_phone', userData.phone);
+        // if (userData?.address) localStorage.setItem('sunbook_address', userData.address);
+        
+        checkNameChangeEligibility();
+    } catch (err) {
+        console.error('Failed to load user data:', err);
+        // في حالة الفشل، نستخدم البيانات المخزنة محلياً كحل احتياطي
+        const savedName = localStorage.getItem('sunbook_username');
+        const savedPhone = localStorage.getItem('sunbook_phone');
+        const savedAddress = localStorage.getItem('sunbook_address');
+
+        if (savedName) document.getElementById('profileNameInput').value = savedName;
+        if (savedPhone) document.getElementById('profilePhoneInput').value = savedPhone;
+        if (savedAddress) document.getElementById('profileAddressInput').value = savedAddress;
+        
+        checkNameChangeEligibility();
+    }
+}
+</script>
+
+</body>
+</html>
