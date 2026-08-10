@@ -14,7 +14,7 @@ async function seed() {
 
   if (!teacher) {
     teacher = await User.create({
-      name: 'Harry B Joseph',
+      name: 'Ahmed Salem',
       email: teacherEmail,
       password: 'Teacher123',
       phone: '01000000000',
