@@ -43,6 +43,7 @@ app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
 app.use('/api/bookings', require('./routes/bookingRoutes'));
 app.use('/api/sessions', require('./routes/sessionRoutes'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/products', require('./routes/productRoutes'));
 
 app.get('/', (req, res) => {
   res.send('Sunbook API is running...');
