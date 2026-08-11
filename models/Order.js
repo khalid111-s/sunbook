@@ -31,6 +31,8 @@ const orderSchema = new mongoose.Schema(
       enum: ['pending', 'paid', 'cancelled'],
       default: 'pending',
     },
+    paymobOrderId: { type: String },
+    paymobPaymentKey: { type: String },
   },
   { timestamps: true }
 );

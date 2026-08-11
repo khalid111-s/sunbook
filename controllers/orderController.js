@@ -1,4 +1,16 @@
 const Order = require('../models/Order');
+const { createPaymobPaymentIntent } = require('../utils/paymob');
+
+const paymobConfigured = () => {
+  const key = process.env.PAYMOB_API_KEY || '';
+  const integrationId = process.env.PAYMOB_INTEGRATION_ID || '';
+  const iframeId = process.env.PAYMOB_IFRAME_ID || '';
+  return (
+    key.length > 0 && !key.includes('your_paymob') &&
+    integrationId.length > 0 && !integrationId.includes('your_paymob') &&
+    iframeId.length > 0 && !iframeId.includes('your_paymob')
+  );
+};
 
 // @desc    Create an order (called from checkout after a purchase is completed)
 // @route   POST /api/orders
@@ -21,7 +33,32 @@ const createOrder = async (req, res) => {
     totalAmount,
   });
 
-  res.status(201).json({ success: true, data: order });
+  let paymentUrl = null;
+
+  if (paymobConfigured()) {
+    try {
+      // بنستخدم نفس دالة الحجز، بس بنمرر له { price, student } بدل الـ booking
+      const paymentData = await createPaymobPaymentIntent({
+        price: totalAmount,
+        student: req.user._id,
+      });
+      order.paymobOrderId = paymentData.orderId;
+      order.paymobPaymentKey = paymentData.paymentKey;
+      await order.save();
+
+      if (process.env.PAYMOB_IFRAME_ID) {
+        paymentUrl = `https://accept.paymob.com/api/acceptance/iframes/${process.env.PAYMOB_IFRAME_ID}?payment_token=${paymentData.paymentKey}`;
+      }
+    } catch (err) {
+      console.error('Paymob Error (order):', err.message);
+    }
+  } else {
+    // وضع التطوير: مفيش مفاتيح Paymob متظبطة، نعتبر الطلب مدفوع مباشرة
+    order.status = 'paid';
+    await order.save();
+  }
+
+  res.status(201).json({ success: true, data: { order, paymentUrl } });
 };
 
 // @desc    List orders (most recent first)
@@ -73,4 +110,36 @@ const getOrderStats = async (req, res) => {
   });
 };
 
-module.exports = { createOrder, getOrders, getOrderStats };
+// @desc    Paymob webhook - marks an order as paid once payment is confirmed
+// @route   POST /api/orders/paymob-callback
+// @access  Public (called by Paymob's servers)
+const paymobCallback = async (req, res) => {
+  try {
+    const { obj } = req.body;
+    if (!obj) {
+      return res.status(400).json({ message: 'Invalid callback data' });
+    }
+
+    const orderId = obj.order?.id || obj.order_id;
+    const success = obj.success === true || obj.payment_status === 'PAID';
+
+    if (!success) {
+      return res.json({ success: false, message: 'Payment not successful' });
+    }
+
+    const order = await Order.findOne({ paymobOrderId: String(orderId) });
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    order.status = 'paid';
+    await order.save();
+
+    res.json({ success: true, message: 'Order payment confirmed' });
+  } catch (error) {
+    console.error('Paymob callback error (order):', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { createOrder, getOrders, getOrderStats, paymobCallback };
