@@ -32,6 +32,7 @@ const createOrder = async (req, res) => {
     governorate,
     items,
     totalAmount,
+    country: req.headers['x-vercel-ip-country'] || 'Unknown',
   });
 
   let paymentUrl = null;
@@ -66,7 +67,7 @@ const createOrder = async (req, res) => {
 // @route   GET /api/orders
 // @access  Private/Admin
 const getOrders = async (req, res) => {
-  const orders = await Order.find().sort({ createdAt: -1 }).limit(200);
+  const orders = await Order.find().populate('user', 'name email').sort({ createdAt: -1 }).limit(200);
   res.json({ success: true, count: orders.length, data: orders });
 };
 

@@ -33,6 +33,8 @@ const orderSchema = new mongoose.Schema(
     },
     paymobOrderId: { type: String },
     paymobPaymentKey: { type: String },
+    // بلد الطلب - بيتاخد تلقائيًا من هيدر Vercel وقت إنشاء الطلب
+    country: { type: String, default: 'Unknown' },
   },
   { timestamps: true }
 );

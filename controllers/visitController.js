@@ -1,4 +1,8 @@
 const Visit = require('../models/Visit');
+const ActiveVisitor = require('../models/ActiveVisitor');
+
+// كام ثانية نعتبر بعدها الزائر "خرج" لو مبعتش heartbeat جديد
+const ONLINE_WINDOW_MS = 90 * 1000;
 
 // @desc    Log a page view (fired from the frontend on every page load)
 // @route   POST /api/visits
@@ -16,6 +20,34 @@ const logVisit = async (req, res) => {
 
   await Visit.create({ path, country, visitorId, referrer: referrer || 'direct' });
   res.status(201).json({ success: true });
+};
+
+// @desc    Heartbeat - fired every ~25s while a tab is open, so we know who's online right now
+// @route   POST /api/visits/heartbeat
+// @access  Public
+const heartbeat = async (req, res) => {
+  const { visitorId, path } = req.body;
+  if (!visitorId) {
+    res.status(400);
+    throw new Error('visitorId is required');
+  }
+
+  await ActiveVisitor.findOneAndUpdate(
+    { visitorId },
+    { visitorId, path, lastSeen: new Date() },
+    { upsert: true }
+  );
+
+  res.json({ success: true });
+};
+
+// @desc    How many visitors are currently on the site
+// @route   GET /api/visits/online
+// @access  Private/Admin
+const getOnlineCount = async (req, res) => {
+  const cutoff = new Date(Date.now() - ONLINE_WINDOW_MS);
+  const count = await ActiveVisitor.countDocuments({ lastSeen: { $gte: cutoff } });
+  res.json({ success: true, data: { online: count } });
 };
 
 // @desc    Visitor + pageview stats for the admin dashboard
@@ -53,6 +85,38 @@ const getVisitStats = async (req, res) => {
     path: { $regex: 'checkout', $options: 'i' },
   });
 
+  // زيارات آخر 30 يوم (مشاهدات + زوار فريدين) - عشان رسم بياني عام للموقع
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+  thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+  const dailyVisitsAgg = await Visit.aggregate([
+    { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+        pageViews: { $sum: 1 },
+        visitors: { $addToSet: '$visitorId' },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+  const dailyVisitsMap = new Map(
+    dailyVisitsAgg.map((d) => [d._id, { pageViews: d.pageViews, visitors: d.visitors.length }])
+  );
+  const dailyVisits = [];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(thirtyDaysAgo);
+    d.setDate(d.getDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    const found = dailyVisitsMap.get(key);
+    dailyVisits.push({
+      date: key,
+      pageViews: found ? found.pageViews : 0,
+      visitors: found ? found.visitors : 0,
+    });
+  }
+
   res.json({
     success: true,
     data: {
@@ -69,8 +133,9 @@ const getVisitStats = async (req, res) => {
         referrer: r._id || 'direct',
         visitors: r.visitors,
       })),
+      dailyVisits,
     },
   });
 };
 
-module.exports = { logVisit, getVisitStats };
+module.exports = { logVisit, heartbeat, getOnlineCount, getVisitStats };
