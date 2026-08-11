@@ -1,4 +1,5 @@
 const Order = require('../models/Order');
+const Booking = require('../models/Booking');
 const { createPaymobPaymentIntent } = require('../utils/paymob');
 
 const paymobConfigured = () => {
@@ -96,6 +97,59 @@ const getOrderStats = async (req, res) => {
     { $limit: 5 },
   ]);
 
+  // إيرادات آخر 30 يوم مقسّمة بالتاريخ - عشان رسم بياني في الداشبورد
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+  thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+  const dailyRevenueAgg = await Order.aggregate([
+    { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+        revenue: { $sum: '$totalAmount' },
+        orders: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
+  // نملى أي يوم مفيهوش طلبات بصفر عشان الرسم البياني يبقى متصل صح
+  const dailyRevenueMap = new Map(dailyRevenueAgg.map((d) => [d._id, d]));
+  const dailyRevenue = [];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(thirtyDaysAgo);
+    d.setDate(d.getDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    const found = dailyRevenueMap.get(key);
+    dailyRevenue.push({
+      date: key,
+      revenue: found ? found.revenue : 0,
+      orders: found ? found.orders : 0,
+    });
+  }
+
+  // الإيرادات حسب نوع المنتج (فيزيكال / ديجيتال) من الطلبات + جلسات الحجز المدفوعة
+  const revenueByItemType = await Order.aggregate([
+    { $unwind: '$items' },
+    {
+      $group: {
+        _id: '$items.type',
+        revenue: { $sum: { $multiply: ['$items.qty', '$items.price'] } },
+      },
+    },
+  ]);
+
+  const [bookingRevenueAgg] = await Booking.aggregate([
+    { $match: { status: 'paid' } },
+    { $group: { _id: null, revenue: { $sum: '$price' } } },
+  ]);
+
+  const revenueByType = [
+    ...revenueByItemType.map((t) => ({ type: t._id || 'physical', revenue: t.revenue })),
+    { type: 'booking', revenue: bookingRevenueAgg ? bookingRevenueAgg.revenue : 0 },
+  ];
+
   res.json({
     success: true,
     data: {
@@ -106,6 +160,8 @@ const getOrderStats = async (req, res) => {
         quantitySold: p.quantitySold,
         revenue: p.revenue,
       })),
+      dailyRevenue,
+      revenueByType,
     },
   });
 };
