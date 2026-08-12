@@ -47,6 +47,7 @@ app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/visits', require('./routes/visitRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
+app.use('/api/settings', require('./routes/settingsRoutes'));
 
 app.get('/', (req, res) => {
   res.send('Sunbook API is running...');

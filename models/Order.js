@@ -26,6 +26,9 @@ const orderSchema = new mongoose.Schema(
     totalAmount: { type: Number, required: true, min: 0 },
     // العملة اللي اتدفع بيها الطلب فعليًا (بتتحدد حسب بلد الزائر وقت الشراء)
     currency: { type: String, enum: ['EGP', 'EUR'], default: 'EGP' },
+    // لو الطلب كان باليورو، ده المبلغ الفعلي بالجنيه اللي اتحصّل عن طريق Paymob
+    // بعد التحويل بسعر الصرف وقت الطلب (Paymob بيتعامل بالجنيه بس على حسابنا الحالي)
+    chargedAmountEGP: { type: Number, default: null },
     // ملحوظة: دلوقتي مفيش بوابة دفع حقيقية موصولة على شراء الكتب،
     // فكل الطلبات بتتسجل بحالة "pending" لحد ما يتوصل Paymob فعليًا.
     status: {
@@ -35,6 +38,8 @@ const orderSchema = new mongoose.Schema(
     },
     paymobOrderId: { type: String },
     paymobPaymentKey: { type: String },
+    // مرجع عملية الدفع عند PayTabs - بنستخدمه لمطابقة الـ webhook بالطلب ده
+    paytabsTranRef: { type: String },
     // بلد الطلب - بيتاخد تلقائيًا من هيدر Vercel وقت إنشاء الطلب
     country: { type: String, default: 'Unknown' },
   },

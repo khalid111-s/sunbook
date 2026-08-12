@@ -1,7 +1,9 @@
 const Order = require('../models/Order');
 const Booking = require('../models/Booking');
 const { createPaymobPaymentIntent } = require('../utils/paymob');
+const { createPaytabsPaymentIntent, isPaytabsConfigured } = require('../utils/paytabs');
 const { getDateRange, dateFormatForUnit, keyForDate, buildBuckets } = require('../utils/dateRange');
+const { getOrCreateSettings } = require('./settingsController');
 
 const paymobConfigured = () => {
   const key = process.env.PAYMOB_API_KEY || '';
@@ -25,6 +27,8 @@ const createOrder = async (req, res) => {
     throw new Error('Order must include at least one item');
   }
 
+  const orderCurrency = currency === 'EUR' ? 'EUR' : 'EGP';
+
   const order = await Order.create({
     user: req.user._id,
     customerName: customerName || req.user.name,
@@ -33,17 +37,58 @@ const createOrder = async (req, res) => {
     governorate,
     items,
     totalAmount,
-    currency: currency === 'EUR' ? 'EUR' : 'EGP',
+    currency: orderCurrency,
     country: req.headers['x-vercel-ip-country'] || 'Unknown',
   });
 
   let paymentUrl = null;
 
-  if (paymobConfigured()) {
+  // --- الأولوية 1: PayTabs (بيدعم يورو حقيقي، مش تحويل يدوي) ---
+  if (isPaytabsConfigured()) {
     try {
-      // بنستخدم نفس دالة الحجز، بس بنمرر له { price, student } بدل الـ booking
+      const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
+      const backendBase = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+
+      const paymentData = await createPaytabsPaymentIntent({
+        amount: totalAmount,
+        currency: orderCurrency,
+        cartId: order._id.toString(),
+        description: items.map((i) => i.title).join(', ').slice(0, 250),
+        customer: {
+          name: customerName || req.user.name,
+          email: req.user.email,
+          phone,
+          street: address,
+          city: governorate,
+          country: order.country === 'EG' ? 'EG' : (order.country || 'EG'),
+          ip: req.ip,
+        },
+        callbackUrl: `${backendBase}/api/orders/paytabs-callback`,
+        returnUrl: `${frontendBase}/checkout.html?paytabs_return=1&order=${order._id}`,
+      });
+
+      order.paytabsTranRef = paymentData.tranRef;
+      await order.save();
+      paymentUrl = paymentData.redirectUrl;
+    } catch (err) {
+      console.error('PayTabs Error (order):', err.response?.data || err.message);
+    }
+  }
+
+  // --- الأولوية 2: Paymob كـ fallback (لسه شغال لحجز الجلسات، وممكن يشتغل هنا برضو) ---
+  // ملحوظة: Paymob على حسابنا بيقبل جنيه بس، فلو الطلب باليورو لازم نحوّله لجنيه الأول
+  // بسعر الصرف المسجل في الإعدادات، عشان منقعش في نفس مشكلة "التحصيل بالرقم غلط".
+  if (!paymentUrl && paymobConfigured()) {
+    try {
+      let amountForPaymob = totalAmount;
+      if (orderCurrency === 'EUR') {
+        const settings = await getOrCreateSettings();
+        amountForPaymob = Math.round(totalAmount * settings.eurToEgpRate * 100) / 100;
+        order.chargedAmountEGP = amountForPaymob;
+      }
+
       const paymentData = await createPaymobPaymentIntent({
-        price: totalAmount,
+        price: amountForPaymob,
         student: req.user._id,
       });
       order.paymobOrderId = paymentData.orderId;
@@ -56,8 +101,10 @@ const createOrder = async (req, res) => {
     } catch (err) {
       console.error('Paymob Error (order):', err.message);
     }
-  } else {
-    // وضع التطوير: مفيش مفاتيح Paymob متظبطة، نعتبر الطلب مدفوع مباشرة
+  }
+
+  // --- وضع التطوير: مفيش أي بوابة دفع متظبطة، نعتبر الطلب مدفوع مباشرة عشان تكمل تجربة الموقع ---
+  if (!paymentUrl && !isPaytabsConfigured() && !paymobConfigured()) {
     order.status = 'paid';
     await order.save();
   }
@@ -217,4 +264,62 @@ const paymobCallback = async (req, res) => {
   }
 };
 
-module.exports = { createOrder, getOrders, getOrderStats, paymobCallback };
+// @desc    PayTabs webhook - marks an order as paid once payment is confirmed
+// @route   POST /api/orders/paytabs-callback
+// @access  Public (called by PayTabs' servers, server-to-server)
+const paytabsCallback = async (req, res) => {
+  try {
+    const body = req.body || {};
+    // PayTabs بيبعت cart_id (بنبعته احنا وقت إنشاء الطلب = Order._id) وtran_ref ونتيجة الدفع
+    const cartId = body.cart_id;
+    const tranRef = body.tran_ref;
+    const responseStatus = body.payment_result?.response_status; // 'A' = Approved
+
+    if (!cartId && !tranRef) {
+      return res.status(400).json({ message: 'Invalid callback data' });
+    }
+
+    const order = cartId
+      ? await Order.findById(cartId).catch(() => null)
+      : await Order.findOne({ paytabsTranRef: tranRef });
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    if (responseStatus === 'A') {
+      order.status = 'paid';
+    } else {
+      order.status = 'cancelled';
+    }
+    if (tranRef) order.paytabsTranRef = tranRef;
+    await order.save();
+
+    res.json({ success: true, message: 'Order status updated' });
+  } catch (error) {
+    console.error('PayTabs callback error (order):', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get a single order (used by the checkout return page to confirm payment status)
+// @route   GET /api/orders/:id
+// @access  Private (owner or admin)
+const getOrderById = async (req, res) => {
+  const order = await Order.findById(req.params.id);
+
+  if (!order) {
+    res.status(404);
+    throw new Error('Order not found');
+  }
+
+  const isOwner = order.user && order.user.toString() === req.user._id.toString();
+  if (!isOwner && req.user.role !== 'admin') {
+    res.status(403);
+    throw new Error('Not authorized to view this order');
+  }
+
+  res.json({ success: true, data: order });
+};
+
+module.exports = { createOrder, getOrders, getOrderById, getOrderStats, paymobCallback, paytabsCallback };
