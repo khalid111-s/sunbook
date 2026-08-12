@@ -1,5 +1,6 @@
 const Visit = require('../models/Visit');
 const ActiveVisitor = require('../models/ActiveVisitor');
+const { getDateRange, dateFormatForUnit, keyForDate, buildBuckets } = require('../utils/dateRange');
 
 // كام ثانية نعتبر بعدها الزائر "خرج" لو مبعتش heartbeat جديد
 const ONLINE_WINDOW_MS = 90 * 1000;
@@ -85,37 +86,35 @@ const getVisitStats = async (req, res) => {
     path: { $regex: 'checkout', $options: 'i' },
   });
 
-  // زيارات آخر 30 يوم (مشاهدات + زوار فريدين) - عشان رسم بياني عام للموقع
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
-  thirtyDaysAgo.setHours(0, 0, 0, 0);
+  // زيارات الفترة المطلوبة (يوم/أسبوع/شهر/سنة) - عشان رسم بياني عام للموقع
+  const granularity = ['day', 'week', 'month', 'year'].includes(req.query.granularity)
+    ? req.query.granularity
+    : 'month';
+  const { start, end, unit, bucketCount } = getDateRange(granularity, req.query.date);
 
   const dailyVisitsAgg = await Visit.aggregate([
-    { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+    { $match: { createdAt: { $gte: start, $lt: end } } },
     {
       $group: {
-        _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+        _id: { $dateToString: { format: dateFormatForUnit(unit), date: '$createdAt' } },
         pageViews: { $sum: 1 },
         visitors: { $addToSet: '$visitorId' },
       },
     },
-    { $sort: { _id: 1 } },
   ]);
   const dailyVisitsMap = new Map(
     dailyVisitsAgg.map((d) => [d._id, { pageViews: d.pageViews, visitors: d.visitors.length }])
   );
-  const dailyVisits = [];
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(thirtyDaysAgo);
-    d.setDate(d.getDate() + i);
-    const key = d.toISOString().slice(0, 10);
+  const buckets = buildBuckets(start, unit, bucketCount);
+  const dailyVisits = buckets.map((d) => {
+    const key = keyForDate(d, unit);
     const found = dailyVisitsMap.get(key);
-    dailyVisits.push({
+    return {
       date: key,
       pageViews: found ? found.pageViews : 0,
       visitors: found ? found.visitors : 0,
-    });
-  }
+    };
+  });
 
   res.json({
     success: true,
@@ -134,6 +133,8 @@ const getVisitStats = async (req, res) => {
         visitors: r.visitors,
       })),
       dailyVisits,
+      granularity,
+      seriesUnit: unit,
     },
   });
 };

@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 const Booking = require('../models/Booking');
 const { createPaymobPaymentIntent } = require('../utils/paymob');
+const { getDateRange, dateFormatForUnit, keyForDate, buildBuckets } = require('../utils/dateRange');
 
 const paymobConfigured = () => {
   const key = process.env.PAYMOB_API_KEY || '';
@@ -98,37 +99,35 @@ const getOrderStats = async (req, res) => {
     { $limit: 5 },
   ]);
 
-  // إيرادات آخر 30 يوم مقسّمة بالتاريخ - عشان رسم بياني في الداشبورد
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
-  thirtyDaysAgo.setHours(0, 0, 0, 0);
+  // إيرادات الفترة المطلوبة (يوم/أسبوع/شهر/سنة) - عشان الرسم البياني في الداشبورد
+  const granularity = ['day', 'week', 'month', 'year'].includes(req.query.granularity)
+    ? req.query.granularity
+    : 'month';
+  const { start, end, unit, bucketCount } = getDateRange(granularity, req.query.date);
 
-  const dailyRevenueAgg = await Order.aggregate([
-    { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+  const revenueAgg = await Order.aggregate([
+    { $match: { createdAt: { $gte: start, $lt: end } } },
     {
       $group: {
-        _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+        _id: { $dateToString: { format: dateFormatForUnit(unit), date: '$createdAt' } },
         revenue: { $sum: '$totalAmount' },
         orders: { $sum: 1 },
       },
     },
-    { $sort: { _id: 1 } },
   ]);
 
-  // نملى أي يوم مفيهوش طلبات بصفر عشان الرسم البياني يبقى متصل صح
-  const dailyRevenueMap = new Map(dailyRevenueAgg.map((d) => [d._id, d]));
-  const dailyRevenue = [];
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(thirtyDaysAgo);
-    d.setDate(d.getDate() + i);
-    const key = d.toISOString().slice(0, 10);
-    const found = dailyRevenueMap.get(key);
-    dailyRevenue.push({
+  // نملى أي فترة مفيهاش طلبات بصفر عشان الرسم البياني يبقى متصل صح
+  const revenueMap = new Map(revenueAgg.map((d) => [d._id, d]));
+  const buckets = buildBuckets(start, unit, bucketCount);
+  const dailyRevenue = buckets.map((d) => {
+    const key = keyForDate(d, unit);
+    const found = revenueMap.get(key);
+    return {
       date: key,
       revenue: found ? found.revenue : 0,
       orders: found ? found.orders : 0,
-    });
-  }
+    };
+  });
 
   // الإيرادات حسب نوع المنتج (فيزيكال / ديجيتال) من الطلبات + جلسات الحجز المدفوعة
   const revenueByItemType = await Order.aggregate([
@@ -162,6 +161,10 @@ const getOrderStats = async (req, res) => {
         revenue: p.revenue,
       })),
       dailyRevenue,
+      granularity,
+      seriesUnit: unit,
+      rangeStart: start,
+      rangeEnd: end,
       revenueByType,
     },
   });
