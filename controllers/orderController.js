@@ -18,7 +18,7 @@ const paymobConfigured = () => {
 // @route   POST /api/orders
 // @access  Private (must be logged in - checkout already requires it)
 const createOrder = async (req, res) => {
-  const { customerName, phone, address, governorate, items, totalAmount } = req.body;
+  const { customerName, phone, address, governorate, items, totalAmount, currency } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     res.status(400);
@@ -33,6 +33,7 @@ const createOrder = async (req, res) => {
     governorate,
     items,
     totalAmount,
+    currency: currency === 'EUR' ? 'EUR' : 'EGP',
     country: req.headers['x-vercel-ip-country'] || 'Unknown',
   });
 
@@ -150,6 +151,19 @@ const getOrderStats = async (req, res) => {
     { type: 'booking', revenue: bookingRevenueAgg ? bookingRevenueAgg.revenue : 0 },
   ];
 
+  // كام طلب دفع بالجنيه المصري مقابل كام طلب دفع باليورو
+  const ordersByCurrencyAgg = await Order.aggregate([
+    { $group: { _id: '$currency', orders: { $sum: 1 }, revenue: { $sum: '$totalAmount' } } },
+  ]);
+  const ordersByCurrency = {
+    EGP: { orders: 0, revenue: 0 },
+    EUR: { orders: 0, revenue: 0 },
+  };
+  ordersByCurrencyAgg.forEach((c) => {
+    const key = c._id === 'EUR' ? 'EUR' : 'EGP';
+    ordersByCurrency[key] = { orders: c.orders, revenue: c.revenue };
+  });
+
   res.json({
     success: true,
     data: {
@@ -166,6 +180,7 @@ const getOrderStats = async (req, res) => {
       rangeStart: start,
       rangeEnd: end,
       revenueByType,
+      ordersByCurrency,
     },
   });
 };

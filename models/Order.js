@@ -24,6 +24,8 @@ const orderSchema = new mongoose.Schema(
       validate: (v) => Array.isArray(v) && v.length > 0,
     },
     totalAmount: { type: Number, required: true, min: 0 },
+    // العملة اللي اتدفع بيها الطلب فعليًا (بتتحدد حسب بلد الزائر وقت الشراء)
+    currency: { type: String, enum: ['EGP', 'EUR'], default: 'EGP' },
     // ملحوظة: دلوقتي مفيش بوابة دفع حقيقية موصولة على شراء الكتب،
     // فكل الطلبات بتتسجل بحالة "pending" لحد ما يتوصل Paymob فعليًا.
     status: {

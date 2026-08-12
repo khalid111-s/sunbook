@@ -5,6 +5,14 @@ const { getDateRange, dateFormatForUnit, keyForDate, buildBuckets } = require('.
 // كام ثانية نعتبر بعدها الزائر "خرج" لو مبعتش heartbeat جديد
 const ONLINE_WINDOW_MS = 90 * 1000;
 
+// @desc    Detect visitor's country (used by the frontend to decide EGP vs EUR display)
+// @route   GET /api/visits/my-country
+// @access  Public
+const getMyCountry = async (req, res) => {
+  const country = req.headers['x-vercel-ip-country'] || 'Unknown';
+  res.json({ success: true, data: { country } });
+};
+
 // @desc    Log a page view (fired from the frontend on every page load)
 // @route   POST /api/visits
 // @access  Public
@@ -86,6 +94,11 @@ const getVisitStats = async (req, res) => {
     path: { $regex: 'checkout', $options: 'i' },
   });
 
+  // زوار من مصر مقابل زوار من برة مصر
+  const egyptVisitorIds = await Visit.distinct('visitorId', { country: 'EG' });
+  const egyptVisitorsCount = egyptVisitorIds.length;
+  const abroadVisitorsCount = Math.max(0, totalUniqueVisitors - egyptVisitorsCount);
+
   // زيارات الفترة المطلوبة (يوم/أسبوع/شهر/سنة) - عشان رسم بياني عام للموقع
   const granularity = ['day', 'week', 'month', 'year'].includes(req.query.granularity)
     ? req.query.granularity
@@ -124,6 +137,8 @@ const getVisitStats = async (req, res) => {
       newVisitors,
       returningVisitors,
       checkoutVisitors: checkoutVisitorIds.length,
+      egyptVisitors: egyptVisitorsCount,
+      abroadVisitors: abroadVisitorsCount,
       topCountries: topCountriesAgg.map((c) => ({
         country: c._id || 'Unknown',
         visitors: c.visitors,
@@ -141,4 +156,4 @@ const getVisitStats = async (req, res) => {
   });
 };
 
-module.exports = { logVisit, heartbeat, getOnlineCount, getVisitStats };
+module.exports = { logVisit, heartbeat, getOnlineCount, getVisitStats, getMyCountry };

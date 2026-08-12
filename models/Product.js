@@ -12,6 +12,12 @@ const productSchema = new mongoose.Schema(
       required: [true, 'Price is required'],
       min: [0, 'Price cannot be negative'],
     },
+    // سعر اختياري باليورو - بيظهر تلقائي للزوار من برة مصر بدل السعر بالجنيه
+    priceEUR: {
+      type: Number,
+      min: [0, 'Price cannot be negative'],
+      default: null,
+    },
     image: {
       type: String,
       required: [true, 'Image is required'],
