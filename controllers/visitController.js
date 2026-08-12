@@ -135,6 +135,8 @@ const getVisitStats = async (req, res) => {
       dailyVisits,
       granularity,
       seriesUnit: unit,
+      rangeStart: start,
+      rangeEnd: end,
     },
   });
 };
