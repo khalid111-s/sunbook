@@ -11,6 +11,7 @@ const dbReady = connectDB();
 dbReady.catch(() => {}); // نمنع تحذير unhandled rejection، الخطأ بيتعالج في الـ middleware تحت
 
 const app = express();
+app.set('trust proxy', 1);
 
 // بيتأكد إن الاتصال بقاعدة البيانات خلص (أو فشل برسالة واضحة)
 // قبل ما يكمل لأي route - بدل ما الطلب يعلّق 10 ثواني من غير أي رسالة.

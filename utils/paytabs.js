@@ -71,4 +71,28 @@ async function createPaytabsPaymentIntent({
   };
 }
 
-module.exports = { createPaytabsPaymentIntent, isPaytabsConfigured };
+/**
+ * بيسأل PayTabs مباشرة عن الحالة الحقيقية لعملية دفع، بدل ما نستنى إشعار (webhook)
+ * ممكن يتأخر أو ميوصلش. ده مصدر معلومة أضمن للتأكد من نتيجة الدفع.
+ * @param {string} tranRef - مرجع العملية اللي PayTabs رجّعهولنا وقت إنشاء الطلب
+ */
+async function queryPaytabsTransaction(tranRef) {
+  const payload = {
+    profile_id: Number(process.env.PAYTABS_PROFILE_ID),
+    tran_ref: tranRef,
+  };
+
+  const { data } = await axios.post(`${PAYTABS_BASE}/payment/query`, payload, {
+    headers: {
+      authorization: process.env.PAYTABS_SERVER_KEY,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  return {
+    responseStatus: data.payment_result?.response_status, // 'A' = Approved
+    raw: data,
+  };
+}
+
+module.exports = { createPaytabsPaymentIntent, isPaytabsConfigured, queryPaytabsTransaction };

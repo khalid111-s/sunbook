@@ -1,7 +1,7 @@
 const Order = require('../models/Order');
 const Booking = require('../models/Booking');
 const { createPaymobPaymentIntent } = require('../utils/paymob');
-const { createPaytabsPaymentIntent, isPaytabsConfigured } = require('../utils/paytabs');
+const { createPaytabsPaymentIntent, isPaytabsConfigured, queryPaytabsTransaction } = require('../utils/paytabs');
 const { getDateRange, dateFormatForUnit, keyForDate, buildBuckets } = require('../utils/dateRange');
 const { getOrCreateSettings } = require('./settingsController');
 
@@ -47,7 +47,7 @@ const createOrder = async (req, res) => {
   if (isPaytabsConfigured()) {
     try {
       const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
-      const backendBase = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+      const backendBase = process.env.BACKEND_URL || `https://${req.get('host')}`;
 
       const paymentData = await createPaytabsPaymentIntent({
         amount: totalAmount,
@@ -317,6 +317,25 @@ const getOrderById = async (req, res) => {
   if (!isOwner && req.user.role !== 'admin') {
     res.status(403);
     throw new Error('Not authorized to view this order');
+  }
+
+  // لو الطلب لسه "pending" ومعاه مرجع PayTabs، نسأل PayTabs مباشرة عن الحالة الحقيقية
+  // بدل ما نستنى الإشعار (webhook) بس - ده بيحل مشكلة إشعارات ماوصلتش أو اتأخرت
+  if (order.status === 'pending' && order.paytabsTranRef) {
+    try {
+      const result = await queryPaytabsTransaction(order.paytabsTranRef);
+      if (result.responseStatus === 'A') {
+        order.status = 'paid';
+        await order.save();
+      } else if (['D', 'E', 'V'].includes(result.responseStatus)) {
+        order.status = 'cancelled';
+        await order.save();
+      }
+      // أي حالة تانية (زي 'H' معلّق أو 'P' لسه شغالة) بنسيبها pending ونجرب تاني بعدين
+    } catch (err) {
+      console.error('PayTabs live status check failed:', err.response?.data || err.message);
+      // مش هنوقف الطلب لو الاستعلام فشل - هنرجع بحالة الطلب الحالية زي ما هي
+    }
   }
 
   res.json({ success: true, data: order });
