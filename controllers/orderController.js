@@ -64,7 +64,7 @@ const createOrder = async (req, res) => {
           ip: req.ip,
         },
         callbackUrl: `${backendBase}/api/orders/paytabs-callback`,
-        returnUrl: `${frontendBase}/checkout.html?paytabs_return=1&order=${order._id}`,
+        returnUrl: `${backendBase}/api/orders/paytabs-return?order=${order._id}`,
       });
 
       order.paytabsTranRef = paymentData.tranRef;
@@ -322,4 +322,23 @@ const getOrderById = async (req, res) => {
   res.json({ success: true, data: order });
 };
 
-module.exports = { createOrder, getOrders, getOrderById, getOrderStats, paymobCallback, paytabsCallback };
+// @desc    Bridge endpoint for PayTabs' return redirect (which may use POST, unlike a
+//          normal browser navigation) - static pages on Vercel reject POST with a 405,
+//          so we catch it here first and bounce the browser to checkout.html with a GET.
+// @route   ALL /api/orders/paytabs-return
+// @access  Public
+const paytabsReturnRedirect = (req, res) => {
+  const orderId = req.query.order || req.body?.order || '';
+  const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
+  res.redirect(302, `${frontendBase}/checkout.html?paytabs_return=1&order=${orderId}`);
+};
+
+module.exports = {
+  createOrder,
+  getOrders,
+  getOrderById,
+  getOrderStats,
+  paymobCallback,
+  paytabsCallback,
+  paytabsReturnRedirect,
+};
