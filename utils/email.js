@@ -34,15 +34,29 @@ async function sendPasswordResetEmail(toEmail, userName, resetUrl) {
     to: toEmail,
     subject: 'Reset your password - The Sun Book',
     html: `
-      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #222;">
-        <h2 style="color:#b8860b;">Password Reset Request</h2>
-        <p>Hi ${userName || 'there'},</p>
-        <p>We received a request to reset your password. Click the button below to choose a new one. This link expires in 1 hour.</p>
-        <p style="text-align:center; margin: 28px 0;">
-          <a href="${resetUrl}" style="background:#b8860b; color:#fff; padding:12px 26px; border-radius:6px; text-decoration:none; font-weight:bold;">Reset Password</a>
-        </p>
-        <p>If you didn't request this, you can safely ignore this email.</p>
-        <p style="color:#888; font-size:0.85rem;">The Sun Book</p>
+      <div style="background:#0d0d0d; padding: 32px 16px; font-family: Georgia, 'Times New Roman', serif;">
+        <div style="max-width: 480px; margin: 0 auto; background:#131313; border: 1px solid rgba(216,176,86,0.25); border-radius: 14px; overflow: hidden;">
+          <div style="background: linear-gradient(135deg, #d8b056, #b8860b); padding: 22px 30px;">
+            <h1 style="margin:0; color:#111; font-size: 1.3rem; letter-spacing: 1px;">The Sun Book</h1>
+          </div>
+          <div style="padding: 30px;">
+            <h2 style="color:#d8b056; font-size: 1.2rem; margin: 0 0 16px;">Password Reset Request</h2>
+            <p style="color:#e8e8e8; line-height: 1.6; margin: 0 0 12px;">Hi ${userName || 'there'},</p>
+            <p style="color:#c9c9c9; line-height: 1.6; margin: 0 0 24px;">
+              We received a request to reset your password. Click the button below to choose a new one.
+              This link expires in <strong style="color:#d8b056;">1 hour</strong>.
+            </p>
+            <div style="text-align:center; margin: 30px 0;">
+              <a href="${resetUrl}" style="background: linear-gradient(135deg, #d8b056, #b8860b); color:#111; padding:14px 32px; border-radius:8px; text-decoration:none; font-weight:bold; font-size: 0.95rem; display:inline-block;">Reset Password</a>
+            </div>
+            <p style="color:#888; font-size:0.85rem; line-height:1.6; margin: 24px 0 0;">
+              If you didn't request this, you can safely ignore this email — your password will stay the same.
+            </p>
+          </div>
+          <div style="border-top: 1px solid rgba(216,176,86,0.15); padding: 18px 30px; text-align:center;">
+            <p style="color:#666; font-size:0.75rem; margin:0; letter-spacing: 0.5px;">The Sun Book</p>
+          </div>
+        </div>
       </div>
     `,
   });
