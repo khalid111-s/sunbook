@@ -56,6 +56,15 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: undefined,
     },
+    // لإعادة تعيين كلمة السر - بنخزن الـ hash بتاع التوكن مش التوكن نفسه (زي الباسورد بالظبط)
+    resetPasswordToken: {
+      type: String,
+      select: false,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      select: false,
+    },
   },
   {
     timestamps: true,

@@ -39,6 +39,12 @@ const orderSchema = new mongoose.Schema(
       enum: ['pending', 'paid', 'cancelled'],
       default: 'pending',
     },
+    // حالة تجهيز/شحن الطلب - منفصلة عن حالة الدفع، بيحدّثها الأدمن يدويًا والعميل يشوفها في البروفايل
+    fulfillmentStatus: {
+      type: String,
+      enum: ['processing', 'shipped', 'delivered'],
+      default: 'processing',
+    },
     paymobOrderId: { type: String },
     paymobPaymentKey: { type: String },
     // مرجع عملية الدفع عند PayTabs - بنستخدمه لمطابقة الـ webhook بالطلب ده

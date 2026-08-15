@@ -56,6 +56,17 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // مخزون فعلي للكتب الفيزيكال - لو trackStock مفعّل، الموقع بيعتمد على stockCount
+    // لتحديد التوافر تلقائيًا (وبينقص لوحده مع كل طلب) بدل الاعتماد على inStock اليدوي بس
+    trackStock: {
+      type: Boolean,
+      default: false,
+    },
+    stockCount: {
+      type: Number,
+      default: 0,
+      min: [0, 'Stock count cannot be negative'],
+    },
   },
   { timestamps: true }
 );

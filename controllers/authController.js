@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
+const { sendPasswordResetEmail } = require('../utils/email');
 const axios = require('axios');
 const crypto = require('crypto');
 
@@ -207,4 +208,101 @@ const facebookLogin = async (req, res) => {
   });
 };
 
-module.exports = { register, login, getMe, updateProfile, googleLogin, facebookLogin };
+// @desc    Request a password reset link by email
+// @route   POST /api/auth/forgot-password
+// @access  Public
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    res.status(400);
+    throw new Error('Please enter your email');
+  }
+
+  const user = await User.findOne({ email: String(email).toLowerCase().trim() });
+
+  // بنرد بنفس الرسالة سواء الإيميل موجود أو لأ، عشان محدش يقدر يعرف إيه الإيميلات المسجلة عندنا
+  const genericMessage = 'If an account with that email exists, a password reset link has been sent.';
+
+  if (!user) {
+    return res.json({ success: true, message: genericMessage });
+  }
+
+  // نولّد توكن عشوائي، نخزّن الـ hash بتاعه بس (زي الباسورد)، ونبعت الأصلي في الإيميل
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  user.resetPasswordToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+  user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // ساعة واحدة
+  await user.save({ validateBeforeSave: false });
+
+  const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
+  const resetUrl = `${frontendBase}/reset-password.html?token=${rawToken}&email=${encodeURIComponent(user.email)}`;
+
+  try {
+    await sendPasswordResetEmail(user.email, user.name, resetUrl);
+  } catch (err) {
+    console.error('Failed to send password reset email:', err.message);
+    // مش هنسرّب للمستخدم إن الإرسال فشل أو لأ - بس نلغي التوكن عشان محدش يستخدمه لو حصل خطأ غريب
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+    res.status(500);
+    throw new Error('Could not send reset email right now, please try again shortly.');
+  }
+
+  res.json({ success: true, message: genericMessage });
+};
+
+// @desc    Reset password using the token from the email link
+// @route   POST /api/auth/reset-password
+// @access  Public
+const resetPassword = async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) {
+    res.status(400);
+    throw new Error('Missing token or new password');
+  }
+  if (password.length < 6) {
+    res.status(400);
+    throw new Error('Password must be at least 6 characters');
+  }
+
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+  const user = await User.findOne({
+    resetPasswordToken: hashedToken,
+    resetPasswordExpires: { $gt: Date.now() },
+  }).select('+resetPasswordToken +resetPasswordExpires');
+
+  if (!user) {
+    res.status(400);
+    throw new Error('This reset link is invalid or has expired. Please request a new one.');
+  }
+
+  user.password = password; // الـ pre('save') hook هيعمل hash تلقائي
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = undefined;
+  await user.save();
+
+  res.json({
+    success: true,
+    message: 'Password updated successfully. You can now sign in.',
+    data: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      token: generateToken(user._id),
+    },
+  });
+};
+
+module.exports = {
+  register,
+  login,
+  getMe,
+  updateProfile,
+  googleLogin,
+  facebookLogin,
+  forgotPassword,
+  resetPassword,
+};

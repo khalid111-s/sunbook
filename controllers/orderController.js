@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 const Booking = require('../models/Booking');
 const PromoCode = require('../models/PromoCode');
+const Product = require('../models/Product');
 const { createPaymobPaymentIntent } = require('../utils/paymob');
 const { createPaytabsPaymentIntent, isPaytabsConfigured, queryPaytabsTransaction } = require('../utils/paytabs');
 const { getDateRange, dateFormatForUnit, keyForDate, buildBuckets } = require('../utils/dateRange');
@@ -26,6 +27,20 @@ const createOrder = async (req, res) => {
   if (!items || !Array.isArray(items) || items.length === 0) {
     res.status(400);
     throw new Error('Order must include at least one item');
+  }
+
+  // --- التحقق من توفر المخزون للكتب الفيزيكال اللي بيتتبّع مخزونها فعليًا، قبل ما نأكد الطلب ---
+  const physicalItemsWithProduct = items.filter((i) => i.type === 'physical' && i.product);
+  const stockUpdates = [];
+  for (const item of physicalItemsWithProduct) {
+    const product = await Product.findById(item.product);
+    if (product && product.trackStock) {
+      if (product.stockCount < item.qty) {
+        res.status(400);
+        throw new Error(`"${product.title}" is out of stock (only ${product.stockCount} left).`);
+      }
+      stockUpdates.push({ id: product._id, qty: item.qty });
+    }
   }
 
   const orderCurrency = currency === 'EUR' ? 'EUR' : 'EGP';
@@ -76,6 +91,11 @@ const createOrder = async (req, res) => {
     currency: orderCurrency,
     country: req.headers['x-vercel-ip-country'] || 'Unknown',
   });
+
+  // --- تنزيل المخزون فعليًا بعد ما اتأكد إنشاء الطلب ---
+  for (const update of stockUpdates) {
+    await Product.findByIdAndUpdate(update.id, { $inc: { stockCount: -update.qty } });
+  }
 
   let paymentUrl = null;
 
@@ -154,6 +174,40 @@ const createOrder = async (req, res) => {
 const getOrders = async (req, res) => {
   const orders = await Order.find().populate('user', 'name email').sort({ createdAt: -1 }).limit(200);
   res.json({ success: true, count: orders.length, data: orders });
+};
+
+// @desc    List the logged-in user's own orders (used by the profile page for order tracking)
+// @route   GET /api/orders/my-orders
+// @access  Private
+const getMyOrders = async (req, res) => {
+  const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
+  res.json({ success: true, count: orders.length, data: orders });
+};
+
+// @desc    Update an order's fulfillment status (processing / shipped / delivered)
+// @route   PATCH /api/orders/:id/fulfillment
+// @access  Private/Admin
+const updateOrderFulfillment = async (req, res) => {
+  const { fulfillmentStatus } = req.body;
+  const validStatuses = ['processing', 'shipped', 'delivered'];
+
+  if (!validStatuses.includes(fulfillmentStatus)) {
+    res.status(400);
+    throw new Error('Invalid fulfillment status');
+  }
+
+  const order = await Order.findByIdAndUpdate(
+    req.params.id,
+    { fulfillmentStatus },
+    { new: true }
+  );
+
+  if (!order) {
+    res.status(404);
+    throw new Error('Order not found');
+  }
+
+  res.json({ success: true, data: order });
 };
 
 // @desc    Revenue + top-selling products summary
@@ -391,6 +445,8 @@ const paytabsReturnRedirect = (req, res) => {
 module.exports = {
   createOrder,
   getOrders,
+  getMyOrders,
+  updateOrderFulfillment,
   getOrderById,
   getOrderStats,
   paymobCallback,
