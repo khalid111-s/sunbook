@@ -1,5 +1,6 @@
 const Order = require('../models/Order');
 const Booking = require('../models/Booking');
+const PromoCode = require('../models/PromoCode');
 const { createPaymobPaymentIntent } = require('../utils/paymob');
 const { createPaytabsPaymentIntent, isPaytabsConfigured, queryPaytabsTransaction } = require('../utils/paytabs');
 const { getDateRange, dateFormatForUnit, keyForDate, buildBuckets } = require('../utils/dateRange');
@@ -20,7 +21,7 @@ const paymobConfigured = () => {
 // @route   POST /api/orders
 // @access  Private (must be logged in - checkout already requires it)
 const createOrder = async (req, res) => {
-  const { customerName, phone, address, governorate, items, totalAmount, currency } = req.body;
+  const { customerName, phone, address, governorate, items, totalAmount, currency, promoCode } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     res.status(400);
@@ -29,6 +30,39 @@ const createOrder = async (req, res) => {
 
   const orderCurrency = currency === 'EUR' ? 'EUR' : 'EGP';
 
+  // --- تطبيق كود الخصم (لو الفرونت بعت واحد) على الإجمالي قبل ما نسجّل الطلب ---
+  let finalAmount = totalAmount;
+  let discountAmount = 0;
+  let appliedPromoCode = '';
+
+  if (promoCode) {
+    const promo = await PromoCode.findOne({ code: String(promoCode).trim().toUpperCase() });
+
+    if (!promo || !promo.active) {
+      res.status(404);
+      throw new Error('Invalid promo code');
+    }
+    if (promo.expiresAt < new Date()) {
+      res.status(400);
+      throw new Error('This promo code has expired');
+    }
+    if (promo.usageLimit && promo.timesUsed >= promo.usageLimit) {
+      res.status(400);
+      throw new Error('This promo code has reached its usage limit');
+    }
+
+    discountAmount =
+      promo.discountType === 'percentage'
+        ? (totalAmount * promo.discountValue) / 100
+        : Math.min(promo.discountValue, totalAmount);
+    discountAmount = Math.round(discountAmount * 100) / 100;
+    finalAmount = Math.max(0, Math.round((totalAmount - discountAmount) * 100) / 100);
+    appliedPromoCode = promo.code;
+
+    promo.timesUsed += 1;
+    await promo.save();
+  }
+
   const order = await Order.create({
     user: req.user._id,
     customerName: customerName || req.user.name,
@@ -36,7 +70,9 @@ const createOrder = async (req, res) => {
     address,
     governorate,
     items,
-    totalAmount,
+    totalAmount: finalAmount,
+    promoCode: appliedPromoCode,
+    discountAmount,
     currency: orderCurrency,
     country: req.headers['x-vercel-ip-country'] || 'Unknown',
   });
@@ -50,7 +86,7 @@ const createOrder = async (req, res) => {
       const backendBase = process.env.BACKEND_URL || `https://${req.get('host')}`;
 
       const paymentData = await createPaytabsPaymentIntent({
-        amount: totalAmount,
+        amount: finalAmount,
         currency: orderCurrency,
         cartId: order._id.toString(),
         description: items.map((i) => i.title).join(', ').slice(0, 250),
@@ -80,10 +116,10 @@ const createOrder = async (req, res) => {
   // بسعر الصرف المسجل في الإعدادات، عشان منقعش في نفس مشكلة "التحصيل بالرقم غلط".
   if (!paymentUrl && paymobConfigured()) {
     try {
-      let amountForPaymob = totalAmount;
+      let amountForPaymob = finalAmount;
       if (orderCurrency === 'EUR') {
         const settings = await getOrCreateSettings();
-        amountForPaymob = Math.round(totalAmount * settings.eurToEgpRate * 100) / 100;
+        amountForPaymob = Math.round(finalAmount * settings.eurToEgpRate * 100) / 100;
         order.chargedAmountEGP = amountForPaymob;
       }
 

@@ -74,6 +74,20 @@ const getVisitStats = async (req, res) => {
     { $limit: 10 },
   ]);
 
+  // أكتر الصفحات زيارة (page views + زوار فريدين لكل صفحة) - عشان نعرف اهتمام الناس فين بالظبط
+  const topPagesAgg = await Visit.aggregate([
+    {
+      $group: {
+        _id: '$path',
+        pageViews: { $sum: 1 },
+        visitors: { $addToSet: '$visitorId' },
+      },
+    },
+    { $project: { pageViews: 1, visitors: { $size: '$visitors' } } },
+    { $sort: { pageViews: -1 } },
+    { $limit: 15 },
+  ]);
+
   // مصادر الزيارات (Referrers) - عدد الزوار الفريدين لكل مصدر
   const topReferrersAgg = await Visit.aggregate([
     { $group: { _id: { referrer: '$referrer', visitorId: '$visitorId' } } },
@@ -139,6 +153,11 @@ const getVisitStats = async (req, res) => {
       checkoutVisitors: checkoutVisitorIds.length,
       egyptVisitors: egyptVisitorsCount,
       abroadVisitors: abroadVisitorsCount,
+      topPages: topPagesAgg.map((p) => ({
+        path: p._id || '/',
+        pageViews: p.pageViews,
+        visitors: p.visitors,
+      })),
       topCountries: topCountriesAgg.map((c) => ({
         country: c._id || 'Unknown',
         visitors: c.visitors,

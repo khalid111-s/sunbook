@@ -100,6 +100,18 @@ const createBooking = async (req, res) => {
   });
 };
 
+// @desc    List all bookings (date/time, payment status, student info) for the admin Sessions tab
+// @route   GET /api/bookings
+// @access  Private/Admin
+const getAllBookings = async (req, res) => {
+  const bookings = await Booking.find()
+    .populate('student', 'name email phone')
+    .populate('teacher', 'name email')
+    .sort({ date: -1 });
+
+  res.json({ success: true, count: bookings.length, data: bookings });
+};
+
 const getMyBookings = async (req, res) => {
   const bookings = await Booking.find({
     $or: [{ student: req.user._id }, { teacher: req.user._id }],
@@ -177,6 +189,7 @@ const paymobCallback = async (req, res) => {
 
 module.exports = {
   createBooking,
+  getAllBookings,
   getMyBookings,
   cancelBooking,
   paymobCallback,

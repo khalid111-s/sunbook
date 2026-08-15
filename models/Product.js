@@ -51,6 +51,11 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    // لو true، بيظهر بادج "Available in Egypt only" على كارت المنتج وصفحته
+    egyptOnly: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

@@ -24,6 +24,9 @@ const orderSchema = new mongoose.Schema(
       validate: (v) => Array.isArray(v) && v.length > 0,
     },
     totalAmount: { type: Number, required: true, min: 0 },
+    // كود الخصم اللي اتستخدم في الطلب ده (لو فيه) + قيمة الخصم اللي اتطرحت بالفعل
+    promoCode: { type: String, default: '' },
+    discountAmount: { type: Number, default: 0 },
     // العملة اللي اتدفع بيها الطلب فعليًا (بتتحدد حسب بلد الزائر وقت الشراء)
     currency: { type: String, enum: ['EGP', 'EUR'], default: 'EGP' },
     // لو الطلب كان باليورو، ده المبلغ الفعلي بالجنيه اللي اتحصّل عن طريق Paymob
