@@ -6,6 +6,7 @@ const { createPaymobPaymentIntent } = require('../utils/paymob');
 const { createPaytabsPaymentIntent, isPaytabsConfigured, queryPaytabsTransaction } = require('../utils/paytabs');
 const { getDateRange, dateFormatForUnit, keyForDate, buildBuckets } = require('../utils/dateRange');
 const { getOrCreateSettings } = require('./settingsController');
+const { sendOrderConfirmationEmail, sendNewOrderAdminAlert } = require('../utils/email');
 
 const paymobConfigured = () => {
   const key = process.env.PAYMOB_API_KEY || '';
@@ -81,6 +82,7 @@ const createOrder = async (req, res) => {
   const order = await Order.create({
     user: req.user._id,
     customerName: customerName || req.user.name,
+    customerEmail: req.user.email,
     phone,
     address,
     governorate,
@@ -95,6 +97,19 @@ const createOrder = async (req, res) => {
   // --- تنزيل المخزون فعليًا بعد ما اتأكد إنشاء الطلب ---
   for (const update of stockUpdates) {
     await Product.findByIdAndUpdate(update.id, { $inc: { stockCount: -update.qty } });
+  }
+
+  // --- إيميلات التأكيد والتنبيه - بنستناهم (Vercel بيوقف التنفيذ بعد الرد) بس في try/catch
+  // عشان أي مشكلة في الإيميل (SMTP معطّل مثلاً) ميوقفش نجاح الطلب نفسه ---
+  try {
+    await sendOrderConfirmationEmail(order);
+  } catch (err) {
+    console.error('Order confirmation email failed:', err.message);
+  }
+  try {
+    await sendNewOrderAdminAlert(order);
+  } catch (err) {
+    console.error('Admin order alert email failed:', err.message);
   }
 
   let paymentUrl = null;

@@ -2,6 +2,7 @@ const Booking = require('../models/Booking');
 const Session = require('../models/Session');
 const User = require('../models/User');
 const { createPaymobPaymentIntent } = require('../utils/paymob');
+const { sendBookingConfirmationEmail, sendNewBookingAdminAlert } = require('../utils/email');
 
 const paymobConfigured = () => {
   const key = process.env.PAYMOB_API_KEY || '';
@@ -92,6 +93,26 @@ const createBooking = async (req, res) => {
     booking.status = 'paid';
     await booking.save();
     await createSessionForBooking(booking);
+  }
+
+  // --- إيميلات التأكيد والتنبيه - بنستناهم عشان Vercel، بس مش هيوقفوا نجاح الحجز لو فشلوا ---
+  const bookingEmailData = {
+    studentName: req.user.name,
+    studentEmail: req.user.email,
+    studentPhone: req.user.phone,
+    subject: booking.subject,
+    date: booking.date,
+    price: booking.price,
+  };
+  try {
+    await sendBookingConfirmationEmail(bookingEmailData);
+  } catch (err) {
+    console.error('Booking confirmation email failed:', err.message);
+  }
+  try {
+    await sendNewBookingAdminAlert(bookingEmailData);
+  } catch (err) {
+    console.error('Admin booking alert email failed:', err.message);
   }
 
   res.status(201).json({
