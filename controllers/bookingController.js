@@ -1,19 +1,8 @@
 const Booking = require('../models/Booking');
 const Session = require('../models/Session');
 const User = require('../models/User');
-const { createPaymobPaymentIntent } = require('../utils/paymob');
+const { createPaytabsPaymentIntent, isPaytabsConfigured } = require('../utils/paytabs');
 const { sendBookingConfirmationEmail, sendNewBookingAdminAlert, sendBookingReminderEmail } = require('../utils/email');
-
-const paymobConfigured = () => {
-  const key = process.env.PAYMOB_API_KEY || '';
-  const integrationId = process.env.PAYMOB_INTEGRATION_ID || '';
-  const iframeId = process.env.PAYMOB_IFRAME_ID || '';
-  return (
-    key.length > 0 && !key.includes('your_paymob') &&
-    integrationId.length > 0 && !integrationId.includes('your_paymob') &&
-    iframeId.length > 0 && !iframeId.includes('your_paymob')
-  );
-};
 
 async function createSessionForBooking(booking) {
   const existing = await Session.findOne({ booking: booking._id });
@@ -107,20 +96,36 @@ const createBooking = async (req, res) => {
 
   let paymentUrl = null;
 
-  if (paymobConfigured()) {
+  if (isPaytabsConfigured()) {
     try {
-      const paymentData = await createPaymobPaymentIntent(booking);
-      booking.paymobOrderId = paymentData.orderId;
-      booking.paymobPaymentKey = paymentData.paymentKey;
-      await booking.save();
+      const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
+      const backendBase = process.env.BACKEND_URL || `https://${req.get('host')}`;
 
-      if (process.env.PAYMOB_IFRAME_ID) {
-        paymentUrl = `https://accept.paymob.com/api/acceptance/iframes/${process.env.PAYMOB_IFRAME_ID}?payment_token=${paymentData.paymentKey}`;
-      }
+      const paymentData = await createPaytabsPaymentIntent({
+        amount: booking.price,
+        currency: 'EGP',
+        cartId: booking._id.toString(),
+        description: `Session booking: ${booking.subject}`.slice(0, 250),
+        customer: {
+          name: req.user.name,
+          email: req.user.email,
+          phone: req.user.phone,
+          country: 'EG',
+          ip: req.ip,
+        },
+        callbackUrl: `${backendBase}/api/bookings/paytabs-callback`,
+        returnUrl: `${backendBase}/api/bookings/paytabs-return?booking=${booking._id}`,
+      });
+
+      booking.paytabsTranRef = paymentData.tranRef;
+      await booking.save();
+      paymentUrl = paymentData.redirectUrl;
     } catch (err) {
-      console.error('Paymob Error:', err.message);
+      console.error('PayTabs Error (booking):', err.response?.data || err.message);
     }
-  } else {
+  }
+
+  if (!paymentUrl && !isPaytabsConfigured()) {
     // وضع التطوير: تأكيد الحجز وإنشاء الجلسة بدون دفع
     await markBookingPaidAndNotify(booking, req.user);
   }
@@ -187,33 +192,51 @@ const cancelBooking = async (req, res) => {
   res.json({ success: true, data: booking });
 };
 
-const paymobCallback = async (req, res) => {
+// @desc    PayTabs webhook - marks a booking as paid once payment is confirmed
+// @route   POST /api/bookings/paytabs-callback
+// @access  Public (called by PayTabs' servers, server-to-server)
+const paytabsCallback = async (req, res) => {
   try {
-    const { obj } = req.body;
+    const body = req.body || {};
+    const cartId = body.cart_id;
+    const tranRef = body.tran_ref;
+    const responseStatus = body.payment_result?.response_status; // 'A' = Approved
 
-    if (!obj) {
+    if (!cartId && !tranRef) {
       return res.status(400).json({ message: 'Invalid callback data' });
     }
 
-    const orderId = obj.order?.id || obj.order_id;
-    const success = obj.success === true || obj.payment_status === 'PAID';
+    const booking = cartId
+      ? await Booking.findById(cartId).catch(() => null)
+      : await Booking.findOne({ paytabsTranRef: tranRef });
 
-    if (!success) {
-      return res.json({ success: false, message: 'Payment not successful' });
-    }
-
-    const booking = await Booking.findOne({ paymobOrderId: String(orderId) });
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-    await markBookingPaidAndNotify(booking);
+    if (tranRef) booking.paytabsTranRef = tranRef;
 
-    res.json({ success: true, message: 'Payment processed and session created' });
+    if (responseStatus === 'A') {
+      await markBookingPaidAndNotify(booking);
+    } else {
+      booking.status = 'cancelled';
+      await booking.save();
+    }
+
+    res.json({ success: true, message: 'Booking status updated' });
   } catch (error) {
-    console.error('Paymob callback error:', error);
+    console.error('PayTabs callback error (booking):', error);
     res.status(500).json({ success: false, message: error.message });
   }
+};
+
+// @desc    Bridge endpoint for PayTabs' return redirect - bounces the browser back
+//          to the profile page's sessions tab with a GET request.
+// @route   ALL /api/bookings/paytabs-return
+// @access  Public
+const paytabsReturnRedirect = (req, res) => {
+  const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
+  res.redirect(302, `${frontendBase}/profile.html?tab=sessions&paytabs_return=1`);
 };
 
 // @desc    Sends a reminder email to any student whose paid session starts in the next ~10 minutes
@@ -267,5 +290,6 @@ module.exports = {
   getMyBookings,
   cancelBooking,
   sendUpcomingReminders,
-  paymobCallback,
+  paytabsCallback,
+  paytabsReturnRedirect,
 };

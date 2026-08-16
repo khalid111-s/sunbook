@@ -43,6 +43,7 @@ const bookingSchema = new mongoose.Schema({
   },
   paymobOrderId: { type: String },
   paymobPaymentKey: { type: String },
+  paytabsTranRef: { type: String },
   notes: { type: String, trim: true },
   cancelledAt: { type: Date },
   cancellationReason: { type: String },

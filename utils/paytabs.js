@@ -40,6 +40,9 @@ async function createPaytabsPaymentIntent({
     cart_amount: Number(amount),
     cart_description: description || 'The Sun Book order',
     paypage_lang: 'en',
+    // بنجمع بيانات العميل/الشحن في موقعنا إحنا قبل ما نوجهه لـ PayTabs، فمش محتاجين
+    // نضيّع وقته بفورم شحن تاني هناك - ده بيسرّع الدفع بشكل واضح
+    hide_shipping: true,
     customer_details: {
       name: customer?.name || 'Sunbook Customer',
       email: customer?.email || 'no-reply@sunbook.example',

@@ -6,7 +6,8 @@ const {
   getMyBookings,
   cancelBooking,
   sendUpcomingReminders,
-  paymobCallback,
+  paytabsCallback,
+  paytabsReturnRedirect,
 } = require('../controllers/bookingController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -15,6 +16,7 @@ router.get('/', protect, authorize('admin'), getAllBookings);
 router.get('/my-bookings', protect, getMyBookings);
 router.get('/send-reminders', sendUpcomingReminders);
 router.patch('/:id/cancel', protect, cancelBooking);
-router.post('/paymob-callback', paymobCallback);
+router.post('/paytabs-callback', paytabsCallback);
+router.all('/paytabs-return', paytabsReturnRedirect);
 
 module.exports = router;
