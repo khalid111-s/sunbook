@@ -8,6 +8,28 @@ const { getDateRange, dateFormatForUnit, keyForDate, buildBuckets } = require('.
 const { getOrCreateSettings } = require('./settingsController');
 const { sendOrderConfirmationEmail, sendNewOrderAdminAlert } = require('../utils/email');
 
+// بيحدّث حالة الطلب لـ "paid" ويبعت إيميلات التأكيد/التنبيه مرة واحدة بس، مهما كانت الطريقة اللي
+// عرفنا بيها إن الدفع نجح (webhook، فحص مباشر، أو وضع التطوير من غير بوابة دفع)
+const markOrderPaidAndNotify = async (order) => {
+  order.status = 'paid';
+  if (!order.confirmationEmailSent) {
+    order.confirmationEmailSent = true;
+    await order.save();
+    try {
+      await sendOrderConfirmationEmail(order);
+    } catch (err) {
+      console.error('Order confirmation email failed:', err.message);
+    }
+    try {
+      await sendNewOrderAdminAlert(order);
+    } catch (err) {
+      console.error('Admin order alert email failed:', err.message);
+    }
+  } else {
+    await order.save();
+  }
+};
+
 const paymobConfigured = () => {
   const key = process.env.PAYMOB_API_KEY || '';
   const integrationId = process.env.PAYMOB_INTEGRATION_ID || '';
@@ -99,19 +121,6 @@ const createOrder = async (req, res) => {
     await Product.findByIdAndUpdate(update.id, { $inc: { stockCount: -update.qty } });
   }
 
-  // --- إيميلات التأكيد والتنبيه - بنستناهم (Vercel بيوقف التنفيذ بعد الرد) بس في try/catch
-  // عشان أي مشكلة في الإيميل (SMTP معطّل مثلاً) ميوقفش نجاح الطلب نفسه ---
-  try {
-    await sendOrderConfirmationEmail(order);
-  } catch (err) {
-    console.error('Order confirmation email failed:', err.message);
-  }
-  try {
-    await sendNewOrderAdminAlert(order);
-  } catch (err) {
-    console.error('Admin order alert email failed:', err.message);
-  }
-
   let paymentUrl = null;
 
   // --- الأولوية 1: PayTabs (بيدعم يورو حقيقي، مش تحويل يدوي) ---
@@ -176,8 +185,7 @@ const createOrder = async (req, res) => {
 
   // --- وضع التطوير: مفيش أي بوابة دفع متظبطة، نعتبر الطلب مدفوع مباشرة عشان تكمل تجربة الموقع ---
   if (!paymentUrl && !isPaytabsConfigured() && !paymobConfigured()) {
-    order.status = 'paid';
-    await order.save();
+    await markOrderPaidAndNotify(order);
   }
 
   res.status(201).json({ success: true, data: { order, paymentUrl } });
@@ -359,8 +367,7 @@ const paymobCallback = async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    order.status = 'paid';
-    await order.save();
+    await markOrderPaidAndNotify(order);
 
     res.json({ success: true, message: 'Order payment confirmed' });
   } catch (error) {
@@ -392,13 +399,14 @@ const paytabsCallback = async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
+    if (tranRef) order.paytabsTranRef = tranRef;
+
     if (responseStatus === 'A') {
-      order.status = 'paid';
+      await markOrderPaidAndNotify(order);
     } else {
       order.status = 'cancelled';
+      await order.save();
     }
-    if (tranRef) order.paytabsTranRef = tranRef;
-    await order.save();
 
     res.json({ success: true, message: 'Order status updated' });
   } catch (error) {
@@ -430,8 +438,7 @@ const getOrderById = async (req, res) => {
     try {
       const result = await queryPaytabsTransaction(order.paytabsTranRef);
       if (result.responseStatus === 'A') {
-        order.status = 'paid';
-        await order.save();
+        await markOrderPaidAndNotify(order);
       } else if (['D', 'E', 'V'].includes(result.responseStatus)) {
         order.status = 'cancelled';
         await order.save();

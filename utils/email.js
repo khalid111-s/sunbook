@@ -171,6 +171,25 @@ async function sendNewBookingAdminAlert(booking) {
   return dispatchEmail({ to: getAdminEmail(), subject: `New Booking - ${booking.studentName}`, html });
 }
 
+// ─── تذكير قبل الجلسة بـ10 دقايق ───
+async function sendBookingReminderEmail(booking) {
+  const dateStr = new Date(booking.date).toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const html = renderEmailShell({
+    heading: 'Your Session Starts Soon ⏰',
+    bodyHtml: `
+      <p style="color:#e8e8e8; line-height: 1.6; margin: 0 0 12px;">Hi ${booking.studentName || 'there'},</p>
+      <p style="color:#c9c9c9; line-height: 1.6; margin: 0 0 20px;">
+        Just a reminder — your session <strong style="color:#d8b056;">"${booking.subject}"</strong> starts at
+        <strong style="color:#d8b056;">${dateStr}</strong>, in about 10 minutes.
+      </p>
+      <div style="text-align:center; margin: 26px 0;">
+        <a href="${booking.sessionUrl}" style="background: linear-gradient(135deg, #d8b056, #b8860b); color:#111; padding:14px 32px; border-radius:8px; text-decoration:none; font-weight:bold; font-size: 0.95rem; display:inline-block;">Join Session</a>
+      </div>
+    `,
+  });
+  return dispatchEmail({ to: booking.studentEmail, subject: 'Your session starts in 10 minutes - The Sun Book', html });
+}
+
 module.exports = {
   isEmailConfigured,
   sendPasswordResetEmail,
@@ -178,4 +197,5 @@ module.exports = {
   sendNewOrderAdminAlert,
   sendBookingConfirmationEmail,
   sendNewBookingAdminAlert,
+  sendBookingReminderEmail,
 };

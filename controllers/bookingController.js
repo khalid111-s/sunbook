@@ -2,7 +2,7 @@ const Booking = require('../models/Booking');
 const Session = require('../models/Session');
 const User = require('../models/User');
 const { createPaymobPaymentIntent } = require('../utils/paymob');
-const { sendBookingConfirmationEmail, sendNewBookingAdminAlert } = require('../utils/email');
+const { sendBookingConfirmationEmail, sendNewBookingAdminAlert, sendBookingReminderEmail } = require('../utils/email');
 
 const paymobConfigured = () => {
   const key = process.env.PAYMOB_API_KEY || '';
@@ -34,6 +34,38 @@ async function createSessionForBooking(booking) {
     status: 'scheduled',
   });
 }
+
+// بيحدّث حالة الحجز لـ "paid" ويبعت إيميلات التأكيد/التنبيه مرة واحدة بس، بعد ما الدفع يتأكد فعليًا
+const markBookingPaidAndNotify = async (booking, studentUser) => {
+  booking.status = 'paid';
+  if (!booking.confirmationEmailSent) {
+    booking.confirmationEmailSent = true;
+    await booking.save();
+
+    const student = studentUser || (await User.findById(booking.student));
+    const bookingEmailData = {
+      studentName: student?.name,
+      studentEmail: student?.email,
+      studentPhone: student?.phone,
+      subject: booking.subject,
+      date: booking.date,
+      price: booking.price,
+    };
+    try {
+      await sendBookingConfirmationEmail(bookingEmailData);
+    } catch (err) {
+      console.error('Booking confirmation email failed:', err.message);
+    }
+    try {
+      await sendNewBookingAdminAlert(bookingEmailData);
+    } catch (err) {
+      console.error('Admin booking alert email failed:', err.message);
+    }
+  } else {
+    await booking.save();
+  }
+  await createSessionForBooking(booking);
+};
 
 const createBooking = async (req, res) => {
   const { teacherId, subject, date, duration, price, paymentMethod, notes } = req.body;
@@ -90,29 +122,7 @@ const createBooking = async (req, res) => {
     }
   } else {
     // وضع التطوير: تأكيد الحجز وإنشاء الجلسة بدون دفع
-    booking.status = 'paid';
-    await booking.save();
-    await createSessionForBooking(booking);
-  }
-
-  // --- إيميلات التأكيد والتنبيه - بنستناهم عشان Vercel، بس مش هيوقفوا نجاح الحجز لو فشلوا ---
-  const bookingEmailData = {
-    studentName: req.user.name,
-    studentEmail: req.user.email,
-    studentPhone: req.user.phone,
-    subject: booking.subject,
-    date: booking.date,
-    price: booking.price,
-  };
-  try {
-    await sendBookingConfirmationEmail(bookingEmailData);
-  } catch (err) {
-    console.error('Booking confirmation email failed:', err.message);
-  }
-  try {
-    await sendNewBookingAdminAlert(bookingEmailData);
-  } catch (err) {
-    console.error('Admin booking alert email failed:', err.message);
+    await markBookingPaidAndNotify(booking, req.user);
   }
 
   res.status(201).json({
@@ -197,9 +207,7 @@ const paymobCallback = async (req, res) => {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-    booking.status = 'paid';
-    await booking.save();
-    await createSessionForBooking(booking);
+    await markBookingPaidAndNotify(booking);
 
     res.json({ success: true, message: 'Payment processed and session created' });
   } catch (error) {
@@ -208,10 +216,56 @@ const paymobCallback = async (req, res) => {
   }
 };
 
+// @desc    Sends a reminder email to any student whose paid session starts in the next ~10 minutes
+//          and hasn't been reminded yet. Meant to be called periodically by an external cron
+//          (e.g. cron-job.org) hitting this endpoint every 5 minutes with the secret key.
+// @route   GET /api/bookings/send-reminders?key=CRON_SECRET
+// @access  Public (protected by a shared secret, not user auth, since it's called by a cron service)
+const sendUpcomingReminders = async (req, res) => {
+  const providedKey = req.query.key || req.headers['x-cron-key'];
+  if (!process.env.CRON_SECRET || providedKey !== process.env.CRON_SECRET) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  const now = new Date();
+  const windowStart = new Date(now.getTime() + 5 * 60000); // من 5 دقايق من دلوقتي
+  const windowEnd = new Date(now.getTime() + 15 * 60000); // لحد 15 دقيقة من دلوقتي (يغطي أي فجوة بين تشغيلتين للـ cron)
+
+  const bookings = await Booking.find({
+    status: 'paid',
+    reminderSent: false,
+    date: { $gte: windowStart, $lte: windowEnd },
+  }).populate('student', 'name email');
+
+  const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
+  let sentCount = 0;
+
+  for (const booking of bookings) {
+    const session = await Session.findOne({ booking: booking._id });
+    try {
+      await sendBookingReminderEmail({
+        studentName: booking.student?.name,
+        studentEmail: booking.student?.email,
+        subject: booking.subject,
+        date: booking.date,
+        sessionUrl: session ? `${frontendBase}/session.html?id=${session._id}` : `${frontendBase}/profile.html`,
+      });
+      sentCount += 1;
+    } catch (err) {
+      console.error('Reminder email failed for booking', booking._id, err.message);
+    }
+    booking.reminderSent = true;
+    await booking.save();
+  }
+
+  res.json({ success: true, remindersSent: sentCount });
+};
+
 module.exports = {
   createBooking,
   getAllBookings,
   getMyBookings,
   cancelBooking,
+  sendUpcomingReminders,
   paymobCallback,
 };

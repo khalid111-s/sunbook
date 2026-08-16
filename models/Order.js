@@ -35,6 +35,8 @@ const orderSchema = new mongoose.Schema(
     chargedAmountEGP: { type: Number, default: null },
     // ملحوظة: دلوقتي مفيش بوابة دفع حقيقية موصولة على شراء الكتب،
     // فكل الطلبات بتتسجل بحالة "pending" لحد ما يتوصل Paymob فعليًا.
+    // بنمنع بيه إرسال إيميل التأكيد أكتر من مرة (ممكن الطلب يترفع "paid" من أكتر مصدر - callback أو فحص مباشر)
+    confirmationEmailSent: { type: Boolean, default: false },
     status: {
       type: String,
       enum: ['pending', 'paid', 'cancelled'],

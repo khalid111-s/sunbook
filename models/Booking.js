@@ -45,7 +45,10 @@ const bookingSchema = new mongoose.Schema({
   paymobPaymentKey: { type: String },
   notes: { type: String, trim: true },
   cancelledAt: { type: Date },
-  cancellationReason: { type: String }
+  cancellationReason: { type: String },
+  // بنمنع بيهم تكرار إرسال إيميلات التأكيد/التذكير
+  confirmationEmailSent: { type: Boolean, default: false },
+  reminderSent: { type: Boolean, default: false },
 }, { 
   timestamps: true 
 });

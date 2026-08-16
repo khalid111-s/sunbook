@@ -67,19 +67,20 @@ const getMeetingConfig = (roomName, user, isTeacher = false) => {
     url: getJitsiUrl(roomName),
     jwt: jwt,
     configOverwrite: {
+      // مكالمة صوت بس - من غير كاميرا خالص من أول لحظة، ومقفولة برضو من الإعدادات
+      startAudioOnly: true,
       startWithAudioMuted: false,
-      startWithVideoMuted: false,
+      startWithVideoMuted: true,
       prejoinPageEnabled: false,
-      disableDeepLinking: true
+      disableDeepLinking: true,
     },
     interfaceConfigOverwrite: {
+      // من غير كاميرا (لأن المكالمة صوت بس) ومن غير خيار دعوة/إضافة حد تاني للمكالمة
       TOOLBAR_BUTTONS: [
-        'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-        'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
-        'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
-        'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
-        'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
-        'security'
+        'microphone', 'closedcaptions', 'fullscreen',
+        'fodeviceselection', 'hangup', 'profile', 'chat',
+        'settings', 'raisehand', 'filmstrip', 'feedback',
+        'stats', 'shortcuts', 'help', 'mute-everyone', 'security'
       ],
       SHOW_JITSI_WATERMARK: false,
       SHOW_WATERMARK_FOR_GUESTS: false,
