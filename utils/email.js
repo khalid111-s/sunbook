@@ -190,12 +190,71 @@ async function sendBookingReminderEmail(booking) {
   return dispatchEmail({ to: booking.studentEmail, subject: 'Your session starts in 10 minutes - The Sun Book', html });
 }
 
+// ─── تأكيد إلغاء الحجز للطالب ───
+async function sendBookingCancelledEmail(booking) {
+  const dateStr = new Date(booking.date).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const html = renderEmailShell({
+    heading: 'Booking Cancelled',
+    bodyHtml: `
+      <p style="color:#e8e8e8; line-height: 1.6; margin: 0 0 12px;">Hi ${booking.studentName || 'there'},</p>
+      <p style="color:#c9c9c9; line-height: 1.6; margin: 0 0 20px;">
+        Your session <strong style="color:#d8b056;">"${booking.subject}"</strong> scheduled for
+        <strong style="color:#d8b056;">${dateStr}</strong> has been cancelled.
+      </p>
+      <p style="color:${booking.refunded ? '#34A853' : '#c9c9c9'}; line-height: 1.6; margin: 0;">
+        ${booking.refunded ? 'A full refund has been issued back to your original payment method.' : 'If a payment was made, our team will follow up regarding your refund.'}
+      </p>
+    `,
+  });
+  return dispatchEmail({ to: booking.studentEmail, subject: 'Booking Cancelled - The Sun Book', html });
+}
+
+// ─── إشعار للطالب إن جلسته اتحسبت فايتة (no-show) وسياسة عدم الاسترجاع ───
+async function sendSessionMissedEmail(booking) {
+  const dateStr = new Date(booking.date).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const html = renderEmailShell({
+    heading: 'Session Marked as Missed',
+    bodyHtml: `
+      <p style="color:#e8e8e8; line-height: 1.6; margin: 0 0 12px;">Hi ${booking.studentName || 'there'},</p>
+      <p style="color:#c9c9c9; line-height: 1.6; margin: 0 0 20px;">
+        Your session <strong style="color:#d8b056;">"${booking.subject}"</strong> scheduled for
+        <strong style="color:#d8b056;">${dateStr}</strong> was marked as missed because nobody joined within the allowed window.
+      </p>
+      <p style="color:#c9c9c9; line-height: 1.6; margin: 0;">
+        Per our policy, missed sessions are not eligible for a refund. If you believe this was a technical issue on our end, please contact support and we'll be happy to look into it.
+      </p>
+    `,
+  });
+  return dispatchEmail({ to: booking.studentEmail, subject: 'Your session was marked as missed - The Sun Book', html });
+}
+
+// ─── تأكيد إلغاء الطلب واسترجاع الفلوس للعميل ───
+async function sendOrderCancelledEmail(order) {
+  const shortId = String(order._id).slice(-6).toUpperCase();
+  const html = renderEmailShell({
+    heading: 'Order Cancelled',
+    bodyHtml: `
+      <p style="color:#e8e8e8; line-height: 1.6; margin: 0 0 12px;">Hi ${order.customerName || 'there'},</p>
+      <p style="color:#c9c9c9; line-height: 1.6; margin: 0 0 20px;">
+        Your order <strong style="color:#d8b056;">#${shortId}</strong> has been cancelled as requested.
+      </p>
+      <p style="color:#34A853; line-height: 1.6; margin: 0;">
+        A full refund of LE ${Number(order.totalAmount).toFixed(2)} has been issued back to your original payment method.
+      </p>
+    `,
+  });
+  return dispatchEmail({ to: order.customerEmail, subject: `Order Cancelled - #${shortId}`, html });
+}
+
 module.exports = {
   isEmailConfigured,
   sendPasswordResetEmail,
   sendOrderConfirmationEmail,
   sendNewOrderAdminAlert,
+  sendOrderCancelledEmail,
   sendBookingConfirmationEmail,
   sendNewBookingAdminAlert,
   sendBookingReminderEmail,
+  sendBookingCancelledEmail,
+  sendSessionMissedEmail,
 };

@@ -1,6 +1,8 @@
 const Session = require('../models/Session');
 const Booking = require('../models/Booking');
+const User = require('../models/User');
 const { getMeetingConfig } = require('../utils/jitsi');
+const { sendSessionMissedEmail } = require('../utils/email');
 
 const getMySessions = async (req, res) => {
   const sessions = await Session.find({
@@ -38,6 +40,19 @@ const getSession = async (req, res) => {
     session.status = 'missed';
     await session.save();
     await Booking.updateOne({ _id: session.booking }, { status: 'cancelled', cancellationReason: 'Student/teacher did not join in time' });
+
+    const student = await User.findById(session.student);
+    const booking = await Booking.findById(session.booking);
+    try {
+      await sendSessionMissedEmail({
+        studentName: student?.name,
+        studentEmail: student?.email,
+        subject: booking?.subject || session.subject,
+        date: session.scheduledDate,
+      });
+    } catch (err) {
+      console.error('Missed-session email failed:', err.message);
+    }
   }
 
   const teacherId = (session.teacher._id || session.teacher).toString();

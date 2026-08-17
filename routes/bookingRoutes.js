@@ -4,6 +4,8 @@ const {
   createBooking,
   getAllBookings,
   getMyBookings,
+  getAvailability,
+  getMonthAvailability,
   cancelBooking,
   sendUpcomingReminders,
   paytabsCallback,
@@ -14,6 +16,8 @@ const { protect, authorize } = require('../middleware/auth');
 router.post('/', protect, createBooking);
 router.get('/', protect, authorize('admin'), getAllBookings);
 router.get('/my-bookings', protect, getMyBookings);
+router.get('/availability', getAvailability);
+router.get('/availability-month', getMonthAvailability);
 router.get('/send-reminders', sendUpcomingReminders);
 router.patch('/:id/cancel', protect, cancelBooking);
 router.post('/paytabs-callback', paytabsCallback);

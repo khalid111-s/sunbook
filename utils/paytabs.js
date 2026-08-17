@@ -98,4 +98,39 @@ async function queryPaytabsTransaction(tranRef) {
   };
 }
 
-module.exports = { createPaytabsPaymentIntent, isPaytabsConfigured, queryPaytabsTransaction };
+/**
+ * بيرجع فلوس عملية دفع ناجحة سواء بالكامل أو جزء منها.
+ * الشرط الوحيد إن الـ tran_ref ده يكون بتاع عملية "sale" ناجحة (status A) قبل كده.
+ * @param {string} tranRef - مرجع عملية الدفع الأصلية
+ * @param {number} amount - المبلغ المطلوب استرجاعه
+ * @param {'EGP'|'EUR'} currency
+ * @param {string} cartId - نفس معرّف الطلب/الحجز الأصلي، بنستخدمه كمرجع في تقرير PayTabs
+ * @param {string} reason - سبب مختصر يظهر في تقارير PayTabs (اختياري)
+ */
+async function refundPaytabsTransaction({ tranRef, amount, currency, cartId, reason }) {
+  const payload = {
+    profile_id: Number(process.env.PAYTABS_PROFILE_ID),
+    tran_type: 'refund',
+    tran_class: 'ecom',
+    cart_id: String(cartId),
+    cart_currency: currency,
+    cart_amount: Number(amount),
+    cart_description: reason || 'Refund',
+    tran_ref: tranRef,
+  };
+
+  const { data } = await axios.post(`${PAYTABS_BASE}/payment/request`, payload, {
+    headers: {
+      authorization: process.env.PAYTABS_SERVER_KEY,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  return {
+    success: data.payment_result?.response_status === 'A',
+    refundTranRef: data.tran_ref,
+    raw: data,
+  };
+}
+
+module.exports = { createPaytabsPaymentIntent, isPaytabsConfigured, queryPaytabsTransaction, refundPaytabsTransaction };

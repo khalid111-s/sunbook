@@ -1,8 +1,8 @@
 const Booking = require('../models/Booking');
 const Session = require('../models/Session');
 const User = require('../models/User');
-const { createPaytabsPaymentIntent, isPaytabsConfigured } = require('../utils/paytabs');
-const { sendBookingConfirmationEmail, sendNewBookingAdminAlert, sendBookingReminderEmail } = require('../utils/email');
+const { createPaytabsPaymentIntent, isPaytabsConfigured, refundPaytabsTransaction } = require('../utils/paytabs');
+const { sendBookingConfirmationEmail, sendNewBookingAdminAlert, sendBookingReminderEmail, sendBookingCancelledEmail, sendSessionMissedEmail } = require('../utils/email');
 
 async function createSessionForBooking(booking) {
   const existing = await Session.findOne({ booking: booking._id });
@@ -56,6 +56,69 @@ const markBookingPaidAndNotify = async (booking, studentUser) => {
   await createSessionForBooking(booking);
 };
 
+// المواعيد الثابتة المتاحة كل يوم (وقت القاهرة)
+const DAILY_SLOTS = ['4:00 PM', '6:00 PM', '8:00 PM'];
+
+// @desc    Returns which dates in a given month are fully booked (all 3 slots taken),
+//          so the calendar can grey them out without checking each day one by one.
+// @route   GET /api/bookings/availability-month?year=YYYY&month=MM
+// @access  Public
+const getMonthAvailability = async (req, res) => {
+  const { year, month } = req.query; // month: 1-12
+  if (!year || !month) {
+    res.status(400);
+    throw new Error('year and month query params are required');
+  }
+
+  const monthStart = new Date(`${year}-${String(month).padStart(2, '0')}-01T00:00:00`);
+  const monthEnd = new Date(monthStart);
+  monthEnd.setMonth(monthEnd.getMonth() + 1);
+
+  const bookings = await Booking.find({
+    date: { $gte: monthStart, $lt: monthEnd },
+    status: { $ne: 'cancelled' },
+  }).select('date');
+
+  const countByDay = {};
+  for (const b of bookings) {
+    const dayKey = new Date(b.date).toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' }); // YYYY-MM-DD
+    countByDay[dayKey] = (countByDay[dayKey] || 0) + 1;
+  }
+
+  const fullyBookedDates = Object.keys(countByDay).filter((day) => countByDay[day] >= DAILY_SLOTS.length);
+
+  res.json({ success: true, data: { fullyBookedDates } });
+};
+
+// @desc    Returns which of the day's 3 fixed slots are already booked for a given date,
+//          based on REAL bookings in the database (not client-side guesses).
+// @route   GET /api/bookings/availability?date=YYYY-MM-DD
+// @access  Public
+const getAvailability = async (req, res) => {
+  const { date } = req.query;
+  if (!date) {
+    res.status(400);
+    throw new Error('date query param is required (YYYY-MM-DD)');
+  }
+
+  const dayStart = new Date(`${date}T00:00:00`);
+  const dayEnd = new Date(`${date}T23:59:59`);
+
+  const bookings = await Booking.find({
+    date: { $gte: dayStart, $lte: dayEnd },
+    status: { $ne: 'cancelled' },
+  }).select('date');
+
+  const bookedTimes = bookings.map((b) =>
+    new Date(b.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Africa/Cairo' })
+  );
+
+  const slots = DAILY_SLOTS.map((time) => ({ time, booked: bookedTimes.includes(time) }));
+  const isFullyBooked = slots.every((s) => s.booked);
+
+  res.json({ success: true, data: { slots, isFullyBooked } });
+};
+
 const createBooking = async (req, res) => {
   const { teacherId, subject, date, duration, price, paymentMethod, notes } = req.body;
 
@@ -69,6 +132,15 @@ const createBooking = async (req, res) => {
   if (Number.isNaN(bookingDate.getTime())) {
     res.status(400);
     throw new Error('Invalid booking date');
+  }
+
+  // لازم يحجز ليوم بعده على الأقل - مفيش حجز لنفس اليوم
+  const tomorrowStart = new Date();
+  tomorrowStart.setHours(0, 0, 0, 0);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  if (bookingDate < tomorrowStart) {
+    res.status(400);
+    throw new Error('Sessions must be booked at least one day in advance');
   }
 
   const existingBooking = await Booking.findOne({
@@ -182,12 +254,54 @@ const cancelBooking = async (req, res) => {
     throw new Error('Cannot cancel a completed booking');
   }
 
+  // لازم يكون فاضل على الجلسة 4 ساعات على الأقل عشان تقدر تلغيها
+  const hoursUntilSession = (new Date(booking.date).getTime() - Date.now()) / (1000 * 60 * 60);
+  if (hoursUntilSession < 4) {
+    res.status(400);
+    throw new Error('Sessions can only be cancelled at least 4 hours before the scheduled time');
+  }
+
+  // لو كان مدفوع فعليًا، نرجّع الفلوس قبل ما نلغي رسميًا
+  let wasRefunded = false;
+  if (booking.status === 'paid' && booking.paytabsTranRef) {
+    try {
+      const refundResult = await refundPaytabsTransaction({
+        tranRef: booking.paytabsTranRef,
+        amount: booking.price,
+        currency: 'EGP',
+        cartId: booking._id.toString(),
+        reason: 'Booking cancelled by user',
+      });
+      wasRefunded = refundResult.success;
+      if (!refundResult.success) {
+        console.error('Refund did not succeed for booking', booking._id, refundResult.raw);
+      }
+    } catch (err) {
+      console.error('Refund request failed for booking', booking._id, err.response?.data || err.message);
+      res.status(500);
+      throw new Error('Could not process the refund right now. Please contact support.');
+    }
+  }
+
   booking.status = 'cancelled';
   booking.cancelledAt = new Date();
   booking.cancellationReason = reason;
   await booking.save();
 
   await Session.updateOne({ booking: booking._id }, { status: 'cancelled' });
+
+  const student = await User.findById(booking.student);
+  try {
+    await sendBookingCancelledEmail({
+      studentName: student?.name,
+      studentEmail: student?.email,
+      subject: booking.subject,
+      date: booking.date,
+      refunded: wasRefunded,
+    });
+  } catch (err) {
+    console.error('Booking cancellation email failed:', err.message);
+  }
 
   res.json({ success: true, data: booking });
 };
@@ -281,13 +395,45 @@ const sendUpcomingReminders = async (req, res) => {
     await booking.save();
   }
 
-  res.json({ success: true, remindersSent: sentCount });
+  // --- نفس الـ cron كمان بيكشف الجلسات اللي فاتت ومحدش دخلها، ويقفلها ---
+  const missedThreshold = new Date(now.getTime() - 15 * 60000); // فات عليها 15 دقيقة من نهاية الميعاد
+  const candidateSessions = await Session.find({ status: 'scheduled' }).populate('booking');
+
+  let missedCount = 0;
+  for (const session of candidateSessions) {
+    const scheduledEnd = new Date(session.scheduledDate.getTime() + (session.duration || 30) * 60000);
+    if (scheduledEnd > missedThreshold) continue; // لسه في وقتها أو في فترة السماح
+
+    session.status = 'missed';
+    await session.save();
+
+    if (session.booking) {
+      await Booking.updateOne({ _id: session.booking._id }, { status: 'cancelled', cancellationReason: 'Student/teacher did not join in time' });
+    }
+
+    const student = await User.findById(session.student);
+    try {
+      await sendSessionMissedEmail({
+        studentName: student?.name,
+        studentEmail: student?.email,
+        subject: session.booking?.subject || session.subject,
+        date: session.scheduledDate,
+      });
+    } catch (err) {
+      console.error('Missed-session email failed for session', session._id, err.message);
+    }
+    missedCount += 1;
+  }
+
+  res.json({ success: true, remindersSent: sentCount, sessionsMarkedMissed: missedCount });
 };
 
 module.exports = {
   createBooking,
   getAllBookings,
   getMyBookings,
+  getAvailability,
+  getMonthAvailability,
   cancelBooking,
   sendUpcomingReminders,
   paytabsCallback,

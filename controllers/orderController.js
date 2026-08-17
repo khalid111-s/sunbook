@@ -3,10 +3,10 @@ const Booking = require('../models/Booking');
 const PromoCode = require('../models/PromoCode');
 const Product = require('../models/Product');
 const { createPaymobPaymentIntent } = require('../utils/paymob');
-const { createPaytabsPaymentIntent, isPaytabsConfigured, queryPaytabsTransaction } = require('../utils/paytabs');
+const { createPaytabsPaymentIntent, isPaytabsConfigured, queryPaytabsTransaction, refundPaytabsTransaction } = require('../utils/paytabs');
 const { getDateRange, dateFormatForUnit, keyForDate, buildBuckets } = require('../utils/dateRange');
 const { getOrCreateSettings } = require('./settingsController');
-const { sendOrderConfirmationEmail, sendNewOrderAdminAlert } = require('../utils/email');
+const { sendOrderConfirmationEmail, sendNewOrderAdminAlert, sendOrderCancelledEmail } = require('../utils/email');
 
 // بيحدّث حالة الطلب لـ "paid" ويبعت إيميلات التأكيد/التنبيه مرة واحدة بس، مهما كانت الطريقة اللي
 // عرفنا بيها إن الدفع نجح (webhook، فحص مباشر، أو وضع التطوير من غير بوابة دفع)
@@ -189,6 +189,77 @@ const createOrder = async (req, res) => {
   }
 
   res.status(201).json({ success: true, data: { order, paymentUrl } });
+};
+
+// @desc    Customer cancels their own physical order and gets a refund - only allowed while
+//          the order hasn't shipped yet. Digital-only orders can never be cancelled since the
+//          customer already has access to the files the moment they pay.
+// @route   PATCH /api/orders/:id/cancel
+// @access  Private (order owner only)
+const cancelOrder = async (req, res) => {
+  const order = await Order.findOne({ _id: req.params.id, user: req.user._id });
+
+  if (!order) {
+    res.status(404);
+    throw new Error('Order not found');
+  }
+
+  if (order.status === 'cancelled') {
+    res.status(400);
+    throw new Error('Order is already cancelled');
+  }
+
+  const hasPhysicalItem = order.items.some((i) => i.type === 'physical');
+  if (!hasPhysicalItem) {
+    res.status(400);
+    throw new Error('Digital orders cannot be cancelled since the files are delivered immediately upon payment');
+  }
+
+  if (order.fulfillmentStatus !== 'processing') {
+    res.status(400);
+    throw new Error('This order has already shipped and can no longer be cancelled');
+  }
+
+  // لو كان مدفوع فعليًا، نرجّع الفلوس قبل ما نلغي رسميًا
+  if (order.status === 'paid' && order.paytabsTranRef) {
+    try {
+      const refundResult = await refundPaytabsTransaction({
+        tranRef: order.paytabsTranRef,
+        amount: order.totalAmount,
+        currency: order.currency || 'EGP',
+        cartId: order._id.toString(),
+        reason: 'Order cancelled by customer',
+      });
+      if (!refundResult.success) {
+        console.error('Refund did not succeed for order', order._id, refundResult.raw);
+      }
+    } catch (err) {
+      console.error('Refund request failed for order', order._id, err.response?.data || err.message);
+      res.status(500);
+      throw new Error('Could not process the refund right now. Please contact support.');
+    }
+  }
+
+  // نرجّع كل الكتب الفيزيكال اللي في الطلب ده للمخزون (لو كان بيتتبّع فعليًا)
+  for (const item of order.items) {
+    if (item.type === 'physical' && item.product) {
+      const product = await Product.findById(item.product);
+      if (product && product.trackStock) {
+        await Product.findByIdAndUpdate(product._id, { $inc: { stockCount: item.qty } });
+      }
+    }
+  }
+
+  order.status = 'cancelled';
+  await order.save();
+
+  try {
+    await sendOrderCancelledEmail(order);
+  } catch (err) {
+    console.error('Order cancellation email failed:', err.message);
+  }
+
+  res.json({ success: true, data: order });
 };
 
 // @desc    List orders (most recent first)
@@ -466,6 +537,7 @@ const paytabsReturnRedirect = (req, res) => {
 
 module.exports = {
   createOrder,
+  cancelOrder,
   getOrders,
   getMyOrders,
   updateOrderFulfillment,
