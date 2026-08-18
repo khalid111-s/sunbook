@@ -20,10 +20,13 @@ const JOIN_WINDOW_BEFORE_MIN = 10; // تقدر تدخل قبل الميعاد ب
 const MISSED_GRACE_MIN = 15; // لو محدش دخل خلال 15 دقيقة من الميعاد، تتحسب "فايتة"
 
 const getSession = async (req, res) => {
-  const session = await Session.findOne({
-    _id: req.params.id,
-    $or: [{ student: req.user._id }, { teacher: req.user._id }],
-  })
+  // الأدمن يقدر يدخل أي جلسة (حتى لو الحساب مش هو المدرس المسجل عليها أصلاً)، عشان تبديل حساب الأدمن مستقبلًا ميبوظش الجلسات القديمة
+  const isAdmin = req.user.role === 'admin';
+  const accessFilter = isAdmin
+    ? { _id: req.params.id }
+    : { _id: req.params.id, $or: [{ student: req.user._id }, { teacher: req.user._id }] };
+
+  const session = await Session.findOne(accessFilter)
     .populate('student', 'name email')
     .populate('teacher', 'name email')
     .populate('booking');
@@ -56,7 +59,7 @@ const getSession = async (req, res) => {
   }
 
   const teacherId = (session.teacher._id || session.teacher).toString();
-  const isTeacher = req.user._id.toString() === teacherId;
+  const isTeacher = isAdmin || req.user._id.toString() === teacherId;
   const meetingConfig = getMeetingConfig(session.jitsiRoomName, req.user, isTeacher);
 
   // بنحسب هل معاد الدخول فتح ولا لسه بدري، عشان الفرونت يوري شاشة الانتظار المناسبة
@@ -81,10 +84,12 @@ const getSession = async (req, res) => {
 };
 
 const joinSession = async (req, res) => {
-  const session = await Session.findOne({
-    _id: req.params.id,
-    $or: [{ student: req.user._id }, { teacher: req.user._id }],
-  });
+  const isAdmin = req.user.role === 'admin';
+  const accessFilter = isAdmin
+    ? { _id: req.params.id }
+    : { _id: req.params.id, $or: [{ student: req.user._id }, { teacher: req.user._id }] };
+
+  const session = await Session.findOne(accessFilter);
 
   if (!session) {
     res.status(404);
@@ -131,10 +136,12 @@ const joinSession = async (req, res) => {
 const endSession = async (req, res) => {
   const { feedback } = req.body;
 
-  const session = await Session.findOne({
-    _id: req.params.id,
-    $or: [{ student: req.user._id }, { teacher: req.user._id }],
-  });
+  const isAdmin = req.user.role === 'admin';
+  const accessFilter = isAdmin
+    ? { _id: req.params.id }
+    : { _id: req.params.id, $or: [{ student: req.user._id }, { teacher: req.user._id }] };
+
+  const session = await Session.findOne(accessFilter);
 
   if (!session) {
     res.status(404);
