@@ -8,23 +8,6 @@ const { getDateRange, dateFormatForUnit, keyForDate, buildBuckets } = require('.
 const { getOrCreateSettings } = require('./settingsController');
 const { sendOrderConfirmationEmail, sendNewOrderAdminAlert, sendOrderCancelledEmail } = require('../utils/email');
 
-// بيبعت إيميلات التأكيد/التنبيه لطلب "الدفع عند الاستلام" فورًا وقت الإنشاء (مفيش خطوة دفع أونلاين ننتظرها)
-const sendCodOrderConfirmation = async (order) => {
-  if (order.confirmationEmailSent) return;
-  order.confirmationEmailSent = true;
-  await order.save();
-  try {
-    await sendOrderConfirmationEmail(order);
-  } catch (err) {
-    console.error('COD order confirmation email failed:', err.message);
-  }
-  try {
-    await sendNewOrderAdminAlert(order);
-  } catch (err) {
-    console.error('Admin COD order alert email failed:', err.message);
-  }
-};
-
 // بيحدّث حالة الطلب لـ "paid" ويبعت إيميلات التأكيد/التنبيه مرة واحدة بس، مهما كانت الطريقة اللي
 // عرفنا بيها إن الدفع نجح (webhook، فحص مباشر، أو وضع التطوير من غير بوابة دفع)
 const markOrderPaidAndNotify = async (order) => {
@@ -62,17 +45,11 @@ const paymobConfigured = () => {
 // @route   POST /api/orders
 // @access  Private (must be logged in - checkout already requires it)
 const createOrder = async (req, res) => {
-  const { customerName, phone, address, governorate, items, totalAmount, currency, promoCode, paymentMethod } = req.body;
+  const { customerName, phone, address, governorate, items, totalAmount, currency, promoCode } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     res.status(400);
     throw new Error('Order must include at least one item');
-  }
-
-  const isCashOnDelivery = paymentMethod === 'cash_on_delivery';
-  if (isCashOnDelivery && !items.some((i) => i.type === 'physical')) {
-    res.status(400);
-    throw new Error('Cash on delivery is only available for orders that include a physical item');
   }
 
   // --- التحقق من توفر المخزون للكتب الفيزيكال اللي بيتتبّع مخزونها فعليًا، قبل ما نأكد الطلب ---
@@ -145,7 +122,6 @@ const createOrder = async (req, res) => {
     promoCode: appliedPromoCode,
     discountAmount,
     currency: orderCurrency,
-    paymentMethod: isCashOnDelivery ? 'cash_on_delivery' : 'card',
     country: req.headers['x-vercel-ip-country'] || 'Unknown',
   });
 
@@ -156,11 +132,6 @@ const createOrder = async (req, res) => {
 
   let paymentUrl = null;
 
-  if (isCashOnDelivery) {
-    // مفيش بوابة دفع هنا خالص - الطلب بيفضل "pending" لحد ما الأدمن يعلّمه delivered،
-    // وقتها بيتحسب مدفوع تلقائيًا (الافتراض إن الفلوس اتحصّلت وقت التسليم)
-    await sendCodOrderConfirmation(order);
-  } else {
   // --- الأولوية 1: PayTabs (بيدعم يورو حقيقي، مش تحويل يدوي) ---
   if (isPaytabsConfigured()) {
     try {
@@ -224,7 +195,6 @@ const createOrder = async (req, res) => {
   // --- وضع التطوير: مفيش أي بوابة دفع متظبطة، نعتبر الطلب مدفوع مباشرة عشان تكمل تجربة الموقع ---
   if (!paymentUrl && !isPaytabsConfigured() && !paymobConfigured()) {
     await markOrderPaidAndNotify(order);
-  }
   }
 
   res.status(201).json({ success: true, data: { order, paymentUrl } });
@@ -329,20 +299,16 @@ const updateOrderFulfillment = async (req, res) => {
     throw new Error('Invalid fulfillment status');
   }
 
-  const order = await Order.findById(req.params.id);
+  const order = await Order.findByIdAndUpdate(
+    req.params.id,
+    { fulfillmentStatus },
+    { new: true }
+  );
+
   if (!order) {
     res.status(404);
     throw new Error('Order not found');
   }
-
-  order.fulfillmentStatus = fulfillmentStatus;
-
-  // لطلبات "الدفع عند الاستلام" - أول ما تتعلّم "Delivered"، نعتبر الفلوس اتحصّلت فعليًا
-  if (fulfillmentStatus === 'delivered' && order.paymentMethod === 'cash_on_delivery' && order.status !== 'paid') {
-    order.status = 'paid';
-  }
-
-  await order.save();
 
   res.json({ success: true, data: order });
 };

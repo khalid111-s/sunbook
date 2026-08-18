@@ -97,7 +97,6 @@ async function sendPasswordResetEmail(toEmail, userName, resetUrl) {
 // ─── تأكيد الطلب للعميل ───
 async function sendOrderConfirmationEmail(order) {
   const shortId = String(order._id).slice(-6).toUpperCase();
-  const isCod = order.paymentMethod === 'cash_on_delivery';
   const html = renderEmailShell({
     heading: 'Order Confirmed 🌞',
     bodyHtml: `
@@ -109,7 +108,6 @@ async function sendOrderConfirmationEmail(order) {
       ${renderItemsTable(order.items)}
       ${order.discountAmount > 0 ? `<p style="color:#34A853; text-align:right; margin: 4px 0;">Discount (${order.promoCode}): -LE ${Number(order.discountAmount).toFixed(2)}</p>` : ''}
       <p style="color:#d8b056; text-align:right; font-weight:bold; font-size:1.1rem; margin: 12px 0 0;">Total: LE ${Number(order.totalAmount).toFixed(2)}</p>
-      ${isCod ? `<p style="color:#e0a552; line-height: 1.6; margin: 20px 0 0; padding:12px; background:rgba(224,165,82,0.1); border-radius:8px;">💵 <strong>Cash on Delivery</strong> — please have the exact amount ready when your order arrives.</p>` : ''}
       <p style="color:#888; font-size:0.85rem; line-height:1.6; margin: 28px 0 0;">
         You can track your order status anytime from your profile page.
       </p>

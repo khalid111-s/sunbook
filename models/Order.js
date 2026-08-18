@@ -37,12 +37,6 @@ const orderSchema = new mongoose.Schema(
     // فكل الطلبات بتتسجل بحالة "pending" لحد ما يتوصل Paymob فعليًا.
     // بنمنع بيه إرسال إيميل التأكيد أكتر من مرة (ممكن الطلب يترفع "paid" من أكتر مصدر - callback أو فحص مباشر)
     confirmationEmailSent: { type: Boolean, default: false },
-    // كارت/محفظة إلكترونية عبر PayTabs، أو دفع عند الاستلام (متاح بس لو في الطلب منتج فيزيكال)
-    paymentMethod: {
-      type: String,
-      enum: ['card', 'cash_on_delivery'],
-      default: 'card',
-    },
     status: {
       type: String,
       enum: ['pending', 'paid', 'cancelled'],
