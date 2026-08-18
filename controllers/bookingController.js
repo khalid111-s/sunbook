@@ -35,6 +35,9 @@ const markBookingPaidAndNotify = async (booking, studentUser) => {
 
     const student = studentUser || (await User.findById(booking.student));
     const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
+    const studentJoinUrl = `${frontendBase}/session.html?id=${session._id}`;
+    // نفس اللينك بس بعلامة from=admin، عشان زرار "الرجوع" في صفحة الجلسة يودّي المدرس للوحة الأدمن مش لبروفايل الطالب
+    const adminJoinUrl = `${studentJoinUrl}&from=admin`;
     const bookingEmailData = {
       studentName: student?.name,
       studentEmail: student?.email,
@@ -42,7 +45,7 @@ const markBookingPaidAndNotify = async (booking, studentUser) => {
       subject: booking.subject,
       date: booking.date,
       price: booking.price,
-      sessionJoinUrl: `${frontendBase}/session.html?id=${session._id}`,
+      sessionJoinUrl: studentJoinUrl,
     };
     try {
       await sendBookingConfirmationEmail(bookingEmailData);
@@ -50,7 +53,7 @@ const markBookingPaidAndNotify = async (booking, studentUser) => {
       console.error('Booking confirmation email failed:', err.message);
     }
     try {
-      await sendNewBookingAdminAlert(bookingEmailData);
+      await sendNewBookingAdminAlert({ ...bookingEmailData, sessionJoinUrl: adminJoinUrl });
     } catch (err) {
       console.error('Admin booking alert email failed:', err.message);
     }

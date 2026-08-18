@@ -3,6 +3,7 @@
 // أول حاجة: اعمل حساب عادي من صفحة تسجيل الدخول في الموقع (Register)،
 // وبعدين شغّل السكريبت ده بإيميلك:
 //   node scripts/makeAdmin.js your@email.com
+// السكريبت بيسمح بـ admin واحد بس: أي حساب تاني كان admin هيترجع تلقائيًا "student".
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const dns = require('dns');
 const mongoose = require('mongoose');
@@ -25,6 +26,15 @@ async function makeAdmin() {
   if (!user) {
     console.log(`⚠️ مفيش حساب بالإيميل ده: ${email}. سجّل حساب عادي في الموقع الأول.`);
   } else {
+    // بنرجّع أي admin تاني (غير الحساب ده) لـ "student"، عشان يفضل في admin واحد بس دايمًا
+    const demoted = await User.updateMany(
+      { role: 'admin', _id: { $ne: user._id } },
+      { $set: { role: 'student' } }
+    );
+    if (demoted.modifiedCount > 0) {
+      console.log(`ℹ️ اتشال الـ admin من ${demoted.modifiedCount} حساب تاني (رجعوا "student").`);
+    }
+
     user.role = 'admin';
     await user.save();
     console.log(`✅ الحساب بقى admin دلوقتي: ${user.name} (${user.email})`);
