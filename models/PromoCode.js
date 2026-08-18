@@ -30,6 +30,18 @@ const promoCodeSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    // أقصى عدد مرات يقدر نفس الشخص يستخدم الكود ده (افتراضيًا مرة واحدة بس لكل عميل)
+    perUserLimit: {
+      type: Number,
+      default: 1,
+    },
+    // سجل بكل مرة الكود اتستخدم فيها ومين استخدمه، عشان نطبّق حد الاستخدام الشخصي
+    usedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
     timesUsed: {
       type: Number,
       default: 0,

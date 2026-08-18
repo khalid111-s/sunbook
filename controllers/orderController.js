@@ -112,6 +112,14 @@ const createOrder = async (req, res) => {
       throw new Error('This promo code has reached its usage limit');
     }
 
+    if (promo.perUserLimit) {
+      const timesUsedByThisUser = promo.usedBy.filter((u) => u.toString() === req.user._id.toString()).length;
+      if (timesUsedByThisUser >= promo.perUserLimit) {
+        res.status(400);
+        throw new Error("You've already used this promo code the maximum number of times allowed");
+      }
+    }
+
     discountAmount =
       promo.discountType === 'percentage'
         ? (totalAmount * promo.discountValue) / 100
@@ -121,6 +129,7 @@ const createOrder = async (req, res) => {
     appliedPromoCode = promo.code;
 
     promo.timesUsed += 1;
+    promo.usedBy.push(req.user._id);
     await promo.save();
   }
 

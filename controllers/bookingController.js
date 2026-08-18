@@ -2,7 +2,7 @@ const Booking = require('../models/Booking');
 const Session = require('../models/Session');
 const User = require('../models/User');
 const { createPaytabsPaymentIntent, isPaytabsConfigured, refundPaytabsTransaction } = require('../utils/paytabs');
-const { sendBookingConfirmationEmail, sendNewBookingAdminAlert, sendBookingReminderEmail, sendBookingCancelledEmail, sendSessionMissedEmail } = require('../utils/email');
+const { sendBookingConfirmationEmail, sendNewBookingAdminAlert, sendBookingReminderEmail, sendBookingCancelledEmail, sendSessionMissedEmail, sendBookingRescheduledEmail } = require('../utils/email');
 
 async function createSessionForBooking(booking) {
   const existing = await Session.findOne({ booking: booking._id });
@@ -231,6 +231,95 @@ const getMyBookings = async (req, res) => {
   res.json({ success: true, count: bookings.length, data: bookings });
 };
 
+// @desc    Reschedule a booking to a new date/time instead of cancelling it entirely -
+//          allowed once per booking, same 4-hour cutoff as cancellation applies.
+// @route   PATCH /api/bookings/:id/reschedule
+// @access  Private (booking owner only)
+const rescheduleBooking = async (req, res) => {
+  const { date } = req.body;
+  if (!date) {
+    res.status(400);
+    throw new Error('Please choose a new date and time');
+  }
+
+  const booking = await Booking.findOne({ _id: req.params.id, student: req.user._id });
+  if (!booking) {
+    res.status(404);
+    throw new Error('Booking not found');
+  }
+
+  if (!['pending', 'paid'].includes(booking.status)) {
+    res.status(400);
+    throw new Error('This booking can no longer be rescheduled');
+  }
+
+  if (booking.rescheduleCount >= 1) {
+    res.status(400);
+    throw new Error('This session has already been rescheduled once. Please contact support for further changes.');
+  }
+
+  const hoursUntilSession = (new Date(booking.date).getTime() - Date.now()) / (1000 * 60 * 60);
+  if (hoursUntilSession < 4) {
+    res.status(400);
+    throw new Error('Sessions can only be rescheduled at least 4 hours before the scheduled time');
+  }
+
+  const newDate = new Date(date);
+  if (Number.isNaN(newDate.getTime())) {
+    res.status(400);
+    throw new Error('Invalid date or time');
+  }
+
+  const tomorrowStart = new Date();
+  tomorrowStart.setHours(0, 0, 0, 0);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  if (newDate < tomorrowStart) {
+    res.status(400);
+    throw new Error('Sessions must be booked at least one day in advance');
+  }
+
+  const newTimeLabel = newDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Africa/Cairo' });
+  if (!DAILY_SLOTS.includes(newTimeLabel)) {
+    res.status(400);
+    throw new Error('Please choose one of the available time slots');
+  }
+
+  // نتأكد إن الميعاد الجديد ده لسه فاضي (مفيش حجز تاني واخده)
+  const conflictingBooking = await Booking.findOne({
+    _id: { $ne: booking._id },
+    date: newDate,
+    status: { $ne: 'cancelled' },
+  });
+  if (conflictingBooking) {
+    res.status(400);
+    throw new Error('This time slot is already booked. Please choose another one.');
+  }
+
+  const oldDate = booking.date;
+  booking.date = newDate;
+  booking.rescheduleCount += 1;
+  booking.reminderSent = false; // عشان التذكير يتبعت تاني على الميعاد الجديد
+  await booking.save();
+
+  // نحدّث الجلسة المرتبطة لو كانت اتعملت أصلاً (يعني الحجز كان متأكد)
+  await Session.updateOne({ booking: booking._id }, { scheduledDate: newDate });
+
+  const student = await User.findById(booking.student);
+  try {
+    await sendBookingRescheduledEmail({
+      studentName: student?.name,
+      studentEmail: student?.email,
+      subject: booking.subject,
+      date: booking.date,
+      oldDate,
+    });
+  } catch (err) {
+    console.error('Reschedule email failed:', err.message);
+  }
+
+  res.json({ success: true, data: booking });
+};
+
 const cancelBooking = async (req, res) => {
   const { reason } = req.body;
 
@@ -435,6 +524,7 @@ module.exports = {
   getAvailability,
   getMonthAvailability,
   cancelBooking,
+  rescheduleBooking,
   sendUpcomingReminders,
   paytabsCallback,
   paytabsReturnRedirect,

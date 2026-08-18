@@ -32,4 +32,19 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = { protect, authorize };
+// زي protect بالظبط، بس مش بترفض الطلب لو مفيش توكن أو كان غلط - بس بتحاول تعرف مين المستخدم لو ممكن.
+// مفيدة للـ endpoints العامة اللي محتاجة تتصرف مختلف شوية لو المستخدم مسجل دخول (زي فحص حد الاستخدام الشخصي لكود خصم)
+const optionalAuth = async (req, res, next) => {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    try {
+      const token = req.headers.authorization.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = await User.findById(decoded.id).select('-password');
+    } catch (error) {
+      req.user = null;
+    }
+  }
+  next();
+};
+
+module.exports = { protect, authorize, optionalAuth };

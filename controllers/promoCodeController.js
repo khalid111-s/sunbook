@@ -42,7 +42,7 @@ function generateRandomCode(prefix = 'SUN') {
 // @route   POST /api/promocodes
 // @access  Private/Admin
 const createPromoCode = async (req, res) => {
-  const { code, discountType, discountValue, durationAmount, durationUnit, usageLimit } = req.body;
+  const { code, discountType, discountValue, durationAmount, durationUnit, usageLimit, perUserLimit } = req.body;
 
   if (!discountValue || discountValue <= 0) {
     res.status(400);
@@ -88,6 +88,7 @@ const createPromoCode = async (req, res) => {
     discountValue,
     expiresAt,
     usageLimit: usageLimit || null,
+    perUserLimit: perUserLimit ? Number(perUserLimit) : 1,
     createdBy: req.user._id,
   });
 
@@ -153,6 +154,15 @@ const validatePromoCode = async (req, res) => {
   if (promoCode.usageLimit && promoCode.timesUsed >= promoCode.usageLimit) {
     res.status(400);
     throw new Error('This promo code has reached its usage limit');
+  }
+
+  // لو المستخدم مسجل دخول، نتأكد إنه مستخدمش الكود ده أكتر من الحد المسموح له شخصيًا
+  if (req.user && promoCode.perUserLimit) {
+    const timesUsedByThisUser = promoCode.usedBy.filter((u) => u.toString() === req.user._id.toString()).length;
+    if (timesUsedByThisUser >= promoCode.perUserLimit) {
+      res.status(400);
+      throw new Error("You've already used this promo code the maximum number of times allowed");
+    }
   }
 
   res.json({

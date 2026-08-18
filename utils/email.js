@@ -248,6 +248,27 @@ async function sendOrderCancelledEmail(order) {
   return dispatchEmail({ to: order.customerEmail, subject: `Order Cancelled - #${shortId}`, html });
 }
 
+// ─── تأكيد إعادة جدولة الجلسة للطالب ───
+async function sendBookingRescheduledEmail(booking) {
+  const oldDateStr = new Date(booking.oldDate).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const newDateStr = new Date(booking.date).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const html = renderEmailShell({
+    heading: 'Session Rescheduled',
+    bodyHtml: `
+      <p style="color:#e8e8e8; line-height: 1.6; margin: 0 0 12px;">Hi ${booking.studentName || 'there'},</p>
+      <p style="color:#c9c9c9; line-height: 1.6; margin: 0 0 20px;">
+        Your session <strong style="color:#d8b056;">"${booking.subject}"</strong> has been moved from
+        <span style="color:#888; text-decoration:line-through;">${oldDateStr}</span> to
+        <strong style="color:#d8b056;">${newDateStr}</strong>.
+      </p>
+      <p style="color:#888; font-size:0.85rem; line-height:1.6; margin: 0;">
+        You can view your updated booking anytime from your profile page.
+      </p>
+    `,
+  });
+  return dispatchEmail({ to: booking.studentEmail, subject: 'Session Rescheduled - The Sun Book', html });
+}
+
 module.exports = {
   isEmailConfigured,
   sendPasswordResetEmail,
@@ -259,4 +280,5 @@ module.exports = {
   sendBookingReminderEmail,
   sendBookingCancelledEmail,
   sendSessionMissedEmail,
+  sendBookingRescheduledEmail,
 };

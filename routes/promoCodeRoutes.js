@@ -7,9 +7,9 @@ const {
   deletePromoCode,
   validatePromoCode,
 } = require('../controllers/promoCodeController');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, optionalAuth } = require('../middleware/auth');
 
-router.post('/validate', validatePromoCode);
+router.post('/validate', optionalAuth, validatePromoCode);
 
 router.get('/', protect, authorize('admin'), getPromoCodes);
 router.post('/', protect, authorize('admin'), createPromoCode);

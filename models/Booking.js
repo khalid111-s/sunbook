@@ -50,6 +50,8 @@ const bookingSchema = new mongoose.Schema({
   // بنمنع بيهم تكرار إرسال إيميلات التأكيد/التذكير
   confirmationEmailSent: { type: Boolean, default: false },
   reminderSent: { type: Boolean, default: false },
+  // بنسمح بإعادة جدولة مرة واحدة بس لكل حجز، عشان نمنع إساءة الاستخدام
+  rescheduleCount: { type: Number, default: 0 },
 }, { 
   timestamps: true 
 });

@@ -7,6 +7,7 @@ const {
   getAvailability,
   getMonthAvailability,
   cancelBooking,
+  rescheduleBooking,
   sendUpcomingReminders,
   paytabsCallback,
   paytabsReturnRedirect,
@@ -20,6 +21,7 @@ router.get('/availability', getAvailability);
 router.get('/availability-month', getMonthAvailability);
 router.get('/send-reminders', sendUpcomingReminders);
 router.patch('/:id/cancel', protect, cancelBooking);
+router.patch('/:id/reschedule', protect, rescheduleBooking);
 router.post('/paytabs-callback', paytabsCallback);
 router.all('/paytabs-return', paytabsReturnRedirect);
 
