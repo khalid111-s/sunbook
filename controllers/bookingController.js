@@ -220,7 +220,19 @@ const getAllBookings = async (req, res) => {
     .populate('teacher', 'name email')
     .sort({ date: -1 });
 
-  res.json({ success: true, count: bookings.length, data: bookings });
+  // بنجيب معاهم الـ Session المرتبطة بكل حجز (لو اتعملت) عشان الأدمن يقدر يدخل الجلسة مباشرة من الجدول
+  const sessions = await Session.find({ booking: { $in: bookings.map((b) => b._id) } }).select('booking status');
+  const sessionByBooking = new Map(sessions.map((s) => [s.booking.toString(), s]));
+
+  const data = bookings.map((b) => {
+    const session = sessionByBooking.get(b._id.toString());
+    const obj = b.toObject();
+    obj.sessionId = session ? session._id : null;
+    obj.sessionStatus = session ? session.status : null;
+    return obj;
+  });
+
+  res.json({ success: true, count: data.length, data });
 };
 
 const getMyBookings = async (req, res) => {
