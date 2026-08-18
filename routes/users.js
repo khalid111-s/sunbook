@@ -4,8 +4,19 @@ const { protect, authorize } = require('../middleware/auth');
 const User = require('../models/User');
 const Order = require('../models/Order');
 
+// اللي بيحجز جلسة بيتوجّه لأول حساب يرجع من الاستعلام ده. لو محدد TEACHER_EMAIL في الإعدادات،
+// بنرجّع بس صاحب الإيميل ده (سواء كان role='teacher' أو 'admin') عشان نضمن حساب واحد ثابت
+// بيستقبل كل الحجوزات، من غير ما نتلخبط لو فيه أكتر من حساب مؤهل.
 router.get('/teachers/list', async (req, res) => {
-  const teachers = await User.find({ role: 'teacher' }).select('name email avatar');
+  let teachers;
+  if (process.env.TEACHER_EMAIL) {
+    teachers = await User.find({
+      email: process.env.TEACHER_EMAIL,
+      role: { $in: ['teacher', 'admin'] },
+    }).select('name email avatar');
+  } else {
+    teachers = await User.find({ role: { $in: ['teacher', 'admin'] } }).select('name email avatar');
+  }
   res.json({ success: true, count: teachers.length, data: teachers });
 });
 

@@ -145,7 +145,13 @@ async function sendBookingConfirmationEmail(booking) {
       <p style="color:#e8e8e8; margin:0 0 6px;"><strong>Subject:</strong> ${booking.subject || '—'}</p>
       <p style="color:#e8e8e8; margin:0 0 6px;"><strong>Date &amp; Time:</strong> ${dateStr}</p>
       <p style="color:#d8b056; margin:16px 0 0; font-weight:bold;">Price: LE ${Number(booking.price).toFixed(2)}</p>
-      <p style="color:#888; font-size:0.85rem; line-height:1.6; margin: 28px 0 0;">
+      ${booking.sessionJoinUrl ? `
+      <div style="text-align:center; margin: 26px 0;">
+        <a href="${booking.sessionJoinUrl}" style="background: linear-gradient(135deg, #d8b056, #b8860b); color:#111; padding:14px 32px; border-radius:8px; text-decoration:none; font-weight:bold; font-size: 0.95rem; display:inline-block;">Join Session</a>
+      </div>
+      <p style="color:#888; font-size:0.8rem; text-align:center; margin: 0 0 20px;">You can join up to 10 minutes before the scheduled time.</p>
+      ` : ''}
+      <p style="color:#888; font-size:0.85rem; line-height:1.6; margin: 8px 0 0;">
         You can view or manage your bookings anytime from your profile page.
       </p>
     `,
@@ -164,7 +170,12 @@ async function sendNewBookingAdminAlert(booking) {
       <p style="color:#e8e8e8; line-height:1.6; margin:0 0 6px;"><strong>Phone:</strong> ${booking.studentPhone || '—'}</p>
       <p style="color:#e8e8e8; line-height:1.6; margin:0 0 6px;"><strong>Subject:</strong> ${booking.subject || '—'}</p>
       <p style="color:#e8e8e8; line-height:1.6; margin:0 0 20px;"><strong>Date &amp; Time:</strong> ${dateStr}</p>
-      <p style="color:#d8b056; font-weight:bold; font-size:1.1rem; margin: 0;">Price: LE ${Number(booking.price).toFixed(2)}</p>
+      <p style="color:#d8b056; font-weight:bold; font-size:1.1rem; margin: 0 0 20px;">Price: LE ${Number(booking.price).toFixed(2)}</p>
+      ${booking.sessionJoinUrl ? `
+      <div style="text-align:center; margin: 20px 0;">
+        <a href="${booking.sessionJoinUrl}" style="background: linear-gradient(135deg, #d8b056, #b8860b); color:#111; padding:14px 32px; border-radius:8px; text-decoration:none; font-weight:bold; font-size: 0.95rem; display:inline-block;">Join Session</a>
+      </div>
+      ` : ''}
     `,
     footerNote: 'The Sun Book — Admin Notification',
   });

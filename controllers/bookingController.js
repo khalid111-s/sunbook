@@ -27,11 +27,14 @@ async function createSessionForBooking(booking) {
 // بيحدّث حالة الحجز لـ "paid" ويبعت إيميلات التأكيد/التنبيه مرة واحدة بس، بعد ما الدفع يتأكد فعليًا
 const markBookingPaidAndNotify = async (booking, studentUser) => {
   booking.status = 'paid';
+  const session = await createSessionForBooking(booking);
+
   if (!booking.confirmationEmailSent) {
     booking.confirmationEmailSent = true;
     await booking.save();
 
     const student = studentUser || (await User.findById(booking.student));
+    const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
     const bookingEmailData = {
       studentName: student?.name,
       studentEmail: student?.email,
@@ -39,6 +42,7 @@ const markBookingPaidAndNotify = async (booking, studentUser) => {
       subject: booking.subject,
       date: booking.date,
       price: booking.price,
+      sessionJoinUrl: `${frontendBase}/session.html?id=${session._id}`,
     };
     try {
       await sendBookingConfirmationEmail(bookingEmailData);
@@ -53,7 +57,6 @@ const markBookingPaidAndNotify = async (booking, studentUser) => {
   } else {
     await booking.save();
   }
-  await createSessionForBooking(booking);
 };
 
 // المواعيد الثابتة المتاحة كل يوم (وقت القاهرة)
