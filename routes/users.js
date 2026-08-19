@@ -20,11 +20,14 @@ router.get('/teachers/list', async (req, res) => {
   res.json({ success: true, count: teachers.length, data: teachers });
 });
 
+// أقصى عدد حسابات admin مسموح بيهم في نفس الوقت
+const MAX_ADMINS = 3;
+
 // @desc    طريقة أسهل من تشغيل سكريبت في الـ terminal: تحويل حساب مسجّل بالفعل لـ admin
 //          عن طريق صفحة ويب (admin-setup.html) بدل ما تدخل السيرفر وتكتب أوامر.
 //          محمي بمفتاح سري (ADMIN_SETUP_KEY) لازم تحطه إنت في الـ Environment Variables بتاعة الباك إند،
 //          عشان محدش تاني غير اللي عنده المفتاح ده يقدر يعمل نفسه admin.
-//          بيسمح بـ admin واحد بس: أي حساب تاني كان admin هيترجع تلقائيًا "student".
+//          مسموح بـ 3 admins بحد أقصى في نفس الوقت.
 // @route   POST /api/users/promote-admin
 // @access  Public (لكن لازم تعرف الـ setupKey الصح)
 router.post('/promote-admin', async (req, res) => {
@@ -51,13 +54,76 @@ router.post('/promote-admin', async (req, res) => {
     throw new Error('No account found with this email. Register a normal account on the site first, then try again.');
   }
 
-  // نضمن admin واحد بس: أي حساب تاني كان admin يترجع "student"
-  await User.updateMany({ role: 'admin', _id: { $ne: user._id } }, { $set: { role: 'student' } });
+  if (user.role === 'admin') {
+    res.json({ success: true, data: { name: user.name, email: user.email, role: user.role, alreadyAdmin: true } });
+    return;
+  }
+
+  const currentAdmins = await User.find({ role: 'admin' }).select('name email');
+  if (currentAdmins.length >= MAX_ADMINS) {
+    res.status(400);
+    throw new Error(
+      `You already have the maximum of ${MAX_ADMINS} admins: ${currentAdmins.map((a) => a.email).join(', ')}. Remove one first (via the demote-admin endpoint) before adding a new one.`
+    );
+  }
 
   user.role = 'admin';
   await user.save();
 
   res.json({ success: true, data: { name: user.name, email: user.email, role: user.role } });
+});
+
+// @desc    عكس promote-admin: يرجّع حساب admin لـ "student"، عشان تفضى مكان في الـ 3 المسموحين
+// @route   POST /api/users/demote-admin
+// @access  Public (لكن لازم تعرف الـ setupKey الصح)
+router.post('/demote-admin', async (req, res) => {
+  const { email, setupKey } = req.body;
+
+  if (!process.env.ADMIN_SETUP_KEY) {
+    res.status(403);
+    throw new Error('Admin setup is not configured on the server. Add ADMIN_SETUP_KEY to your backend environment variables first.');
+  }
+
+  if (!setupKey || setupKey !== process.env.ADMIN_SETUP_KEY) {
+    res.status(401);
+    throw new Error('Invalid setup key.');
+  }
+
+  if (!email) {
+    res.status(400);
+    throw new Error('Email is required.');
+  }
+
+  const user = await User.findOne({ email: email.toLowerCase().trim() });
+  if (!user) {
+    res.status(404);
+    throw new Error('No account found with this email.');
+  }
+
+  if (user.role !== 'admin') {
+    res.json({ success: true, data: { name: user.name, email: user.email, role: user.role, wasNotAdmin: true } });
+    return;
+  }
+
+  user.role = 'student';
+  await user.save();
+
+  res.json({ success: true, data: { name: user.name, email: user.email, role: user.role } });
+});
+
+// @desc    عرض الأدمنز الحاليين (عشان تعرف تختار مين تشيل لو وصلت للحد الأقصى)
+// @route   GET /api/users/admins-list?setupKey=...
+// @access  Public (لكن لازم تعرف الـ setupKey الصح)
+router.get('/admins-list', async (req, res) => {
+  const { setupKey } = req.query;
+
+  if (!process.env.ADMIN_SETUP_KEY || !setupKey || setupKey !== process.env.ADMIN_SETUP_KEY) {
+    res.status(401);
+    throw new Error('Invalid setup key.');
+  }
+
+  const admins = await User.find({ role: 'admin' }).select('name email createdAt');
+  res.json({ success: true, count: admins.length, max: MAX_ADMINS, data: admins });
 });
 
 // @desc    List registered users with name, email, registration date, and how many orders each made

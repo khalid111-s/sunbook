@@ -3,13 +3,15 @@
 // أول حاجة: اعمل حساب عادي من صفحة تسجيل الدخول في الموقع (Register)،
 // وبعدين شغّل السكريبت ده بإيميلك:
 //   node scripts/makeAdmin.js your@email.com
-// السكريبت بيسمح بـ admin واحد بس: أي حساب تاني كان admin هيترجع تلقائيًا "student".
+// مسموح بـ 3 admins بحد أقصى في نفس الوقت (نفس حد صفحة admin-setup.html).
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const dns = require('dns');
 const mongoose = require('mongoose');
 const User = require('../models/User');
 
 dns.setServers(['8.8.8.8', '1.1.1.1']);
+
+const MAX_ADMINS = 3;
 
 async function makeAdmin() {
   const email = process.argv[2];
@@ -25,19 +27,19 @@ async function makeAdmin() {
   const user = await User.findOne({ email });
   if (!user) {
     console.log(`⚠️ مفيش حساب بالإيميل ده: ${email}. سجّل حساب عادي في الموقع الأول.`);
+  } else if (user.role === 'admin') {
+    console.log(`ℹ️ الحساب ده admin بالفعل: ${user.name} (${user.email})`);
   } else {
-    // بنرجّع أي admin تاني (غير الحساب ده) لـ "student"، عشان يفضل في admin واحد بس دايمًا
-    const demoted = await User.updateMany(
-      { role: 'admin', _id: { $ne: user._id } },
-      { $set: { role: 'student' } }
-    );
-    if (demoted.modifiedCount > 0) {
-      console.log(`ℹ️ اتشال الـ admin من ${demoted.modifiedCount} حساب تاني (رجعوا "student").`);
+    const currentAdmins = await User.find({ role: 'admin' }).select('name email');
+    if (currentAdmins.length >= MAX_ADMINS) {
+      console.log(`❌ عندك بالفعل ${MAX_ADMINS} admins (الحد الأقصى):`);
+      currentAdmins.forEach((a) => console.log(`   - ${a.name} (${a.email})`));
+      console.log('   شيل واحد منهم الأول (رجّع role بتاعه لـ "student") قبل ما تضيف حساب جديد.');
+    } else {
+      user.role = 'admin';
+      await user.save();
+      console.log(`✅ الحساب بقى admin دلوقتي: ${user.name} (${user.email})`);
     }
-
-    user.role = 'admin';
-    await user.save();
-    console.log(`✅ الحساب بقى admin دلوقتي: ${user.name} (${user.email})`);
   }
 
   await mongoose.disconnect();
