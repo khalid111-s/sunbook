@@ -2,7 +2,6 @@ require('dotenv').config();
 require('express-async-errors');
 
 const express = require('express');
-const path = require('path');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
@@ -33,11 +32,7 @@ const clientUrls = (process.env.CLIENT_URL || '*')
 app.use(cors({
   origin: clientUrls.includes('*') ? true : clientUrls,
 }));
-// limit مرفوع عشان الصور بتوصل كـ base64 (بتبقى أكبر من الحجم الأصلي للصورة بحوالي 33%)
-app.use(express.json({ limit: '12mb' }));
-
-// بيسمح بالوصول للصور المرفوعة من الأدمن على https://your-backend-domain/uploads/filename.png
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(express.json());
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -50,7 +45,6 @@ app.use('/api/bookings', require('./routes/bookingRoutes'));
 app.use('/api/sessions', require('./routes/sessionRoutes'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/products', require('./routes/productRoutes'));
-app.use('/api/upload', require('./routes/uploadRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/visits', require('./routes/visitRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
