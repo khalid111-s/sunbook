@@ -5,6 +5,7 @@ const {
   login,
   getMe,
   updateProfile,
+  deleteAccount,
   googleLogin,
   facebookLogin,
   forgotPassword,
@@ -20,5 +21,6 @@ router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.get('/me', protect, getMe);
 router.put('/update-profile', protect, updateProfile);
+router.delete('/delete-account', protect, deleteAccount);
 
 module.exports = router;

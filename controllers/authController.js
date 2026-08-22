@@ -1,4 +1,8 @@
 const User = require('../models/User');
+const Order = require('../models/Order');
+const Booking = require('../models/Booking');
+const Session = require('../models/Session');
+const Review = require('../models/Review');
 const generateToken = require('../utils/generateToken');
 const { sendPasswordResetEmail } = require('../utils/email');
 const axios = require('axios');
@@ -296,11 +300,42 @@ const resetPassword = async (req, res) => {
   });
 };
 
+// @desc    Permanently delete the logged-in user's account and all their data
+// @route   DELETE /api/auth/delete-account
+// @access  Private
+const deleteAccount = async (req, res) => {
+  const userId = req.user._id;
+
+  // الأدمن والمدرّس لازم يتشالوا بطرق تانية أول (زي demote-admin) قبل ما يقدروا يمسحوا حسابهم،
+  // عشان منمنعش الموقع يفضل من غير admin، أو نسيب حجوزات طلاب تانيين معلّقة على مدرّس ماحوش
+  if (req.user.role === 'admin' || req.user.role === 'teacher') {
+    res.status(400);
+    throw new Error(
+      req.user.role === 'admin'
+        ? 'Admin accounts cannot self-delete. Demote to a regular account first via Admin Setup, then try again.'
+        : 'Teacher accounts cannot self-delete while linked to student bookings. Please contact support.'
+    );
+  }
+
+  // بنمسح كل البيانات المرتبطة بالحساب (طلبات، حجوزات، حصص، مراجعات) قبل ما نمسح الحساب نفسه
+  await Promise.all([
+    Order.deleteMany({ user: userId }),
+    Booking.deleteMany({ student: userId }),
+    Session.deleteMany({ student: userId }),
+    Review.deleteMany({ user: userId }),
+  ]);
+
+  await User.findByIdAndDelete(userId);
+
+  res.json({ success: true, message: 'Your account and all associated data have been permanently deleted.' });
+};
+
 module.exports = {
   register,
   login,
   getMe,
   updateProfile,
+  deleteAccount,
   googleLogin,
   facebookLogin,
   forgotPassword,
