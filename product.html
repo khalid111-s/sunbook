@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Details - The Sun Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/png" href="assets/sun-icon.png">
+</head>
+<body>
+<div data-include="components/header.html"></div>
+
+<!-- =========================================
+     قسم تفاصيل المنتج الرئيسي (Hero) - Dynamic Template
+     ========================================= -->
+<section class="single-product-section reveal">
+    <div class="container single-product-container">
+
+        <!-- الصورة على الشمال مع توهج ذهبي خلفها -->
+        <div class="product-gallery">
+            <div class="product-gallery-glow"></div>
+            <img id="main-product-img" src="assets/sun-icon.png" alt="Book Cover">
+
+            <!-- زرار معاينة صورة الغلاف بحجم أكبر - جاهز لاحقًا لعرض صفحات الكتاب الحقيقية -->
+            <button type="button" class="gallery-preview-btn" id="galleryPreviewBtn" aria-label="Preview book" data-i18n-aria-label="product.previewBook">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- التفاصيل على اليمين -->
+        <div class="product-info-details">
+            <!-- شريط "متاح في مصر فقط" - بيظهر هنا بدل ما يبقى فوق صورة الغلاف -->
+            <div class="product-egypt-banner" id="productEgyptBanner" hidden data-i18n="product.egyptOnly">Egypt Only</div>
+
+            <h1 id="product-title" class="product-title-large" data-i18n="product.loadingTitle">Loading...</h1>
+
+            <div id="product-badges" class="card-badges" style="margin: 8px 0;"></div>
+
+            <p id="product-price" class="product-price-large">LE 0.00</p>
+
+            <div class="product-description" id="product-desc-wrapper">
+                <p id="product-desc" data-i18n="product.loadingDesc">Loading the book's details and the mysteries within...</p>
+                <button type="button" class="read-more-toggle" id="readMoreBtn" hidden>Read More</button>
+            </div>
+
+            <div class="purchase-actions">
+                <div class="modern-qty">
+                    <button class="qty-btn minus-btn">−</button>
+                    <input type="number" value="1" min="1" class="qty-input-val">
+                    <button class="qty-btn plus-btn">+</button>
+                </div>
+                <button class="btn-shop add-to-cart-large" data-i18n="product.addToCart">Add to Cart </button>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- =========================================
+     معاينة الغلاف (Lightbox) - بتتفتح لما تدوس على أيقونة العين فوق الصورة
+     ملحوظة للمطوّر: دلوقتي بتعرض صورة الغلاف بس بحجم أكبر. لاحقًا لما صور
+     صفحات الكتاب تبقى جاهزة، هيتحط جوه .lightbox-preview-body مكوّن التقليب
+     الحقيقي (flipbook) بدل الصورة الواحدة - من غير ما نغير مكان الزرار.
+     ========================================= -->
+<div class="book-preview-lightbox" id="bookPreviewLightbox" hidden>
+    <div class="lightbox-backdrop" id="lightboxBackdrop"></div>
+    <div class="lightbox-content">
+        <button type="button" class="lightbox-close-btn" id="lightboxCloseBtn" aria-label="Close preview" data-i18n-aria-label="product.closePreview">&times;</button>
+        <div class="lightbox-preview-body">
+            <img id="lightbox-img" src="assets/sun-icon.png" alt="Book preview">
+        </div>
+        <p class="lightbox-caption" data-i18n="product.previewComingSoon">Full page preview — coming soon</p>
+    </div>
+</div>
+
+<!-- =========================================
+     قسم التبويبات (تفاصيل الطبعة / آراء القراء)
+     ========================================= -->
+<section class="product-tabs-section reveal">
+    <div class="container">
+        <div class="product-tabs-nav">
+            <button class="product-tab-btn active" data-tab="details" data-i18n="product.tabDetails">Edition Details</button>
+            <button class="product-tab-btn" data-tab="reviews" data-i18n="product.tabReviews">Reader Reviews</button>
+        </div>
+
+        <div class="product-tabs-content">
+            <div class="product-tab-pane active" id="tab-details">
+                <ul class="product-detail-list" id="product-detail-list">
+                    <li><span data-i18n="product.status">Status</span><strong data-i18n="product.tba">To be announced soon</strong></li>
+                </ul>
+            </div>
+
+            <div class="product-tab-pane" id="tab-reviews">
+                <!-- ملخص التقييم (متوسط النجوم + عدد المراجعات) -->
+                <div class="reviews-summary" id="reviewsSummary" hidden>
+                    <span class="reviews-summary-score" id="reviewsAverageScore">0.0</span>
+                    <span class="reviews-summary-stars" id="reviewsAverageStars"></span>
+                    <span class="reviews-summary-count" id="reviewsCount">0 reviews</span>
+                </div>
+
+                <!-- فورم إضافة/تعديل مراجعة - يظهر بس لو المستخدم مسجل دخول -->
+                <form class="review-form" id="reviewForm" hidden>
+                    <p class="review-form-label" data-i18n="product.yourRating">Your rating</p>
+                    <div class="star-input" id="starInput">
+                        <button type="button" class="star-btn" data-value="1" aria-label="1 star" data-i18n-aria-label="product.star1">★</button>
+                        <button type="button" class="star-btn" data-value="2" aria-label="2 stars" data-i18n-aria-label="product.star2">★</button>
+                        <button type="button" class="star-btn" data-value="3" aria-label="3 stars" data-i18n-aria-label="product.star3">★</button>
+                        <button type="button" class="star-btn" data-value="4" aria-label="4 stars" data-i18n-aria-label="product.star4">★</button>
+                        <button type="button" class="star-btn" data-value="5" aria-label="5 stars" data-i18n-aria-label="product.star5">★</button>
+                    </div>
+                    <textarea class="review-textarea" id="reviewCommentInput" rows="3" maxlength="1000" placeholder="Share your thoughts about this book..." data-i18n-placeholder="product.shareThoughts"></textarea>
+                    <div class="review-form-actions">
+                        <button type="submit" class="btn-shop" id="reviewSubmitBtn" data-i18n="product.submitReview">Submit Review</button>
+                        <button type="button" class="review-delete-btn" id="reviewDeleteBtn" hidden data-i18n="product.deleteReview">Delete my review</button>
+                    </div>
+                </form>
+
+                <!-- بروبمت لو مش مسجل دخول -->
+                <div class="review-login-prompt" id="reviewLoginPrompt" hidden>
+                    <p data-i18n="product.signInToReview">Sign in to leave a rating and share your opinion about this book.</p>
+                    <a href="login.html" class="btn-shop" id="reviewLoginLink" data-i18n="product.signInLink">Sign In</a>
+                </div>
+
+                <!-- قايمة المراجعات -->
+                <div class="reviews-list" id="reviewsList">
+                    <div class="empty-state" id="reviewsEmptyState">
+                        <p data-i18n="product.noReviewsYet">No reviews yet. Be the first to share your opinion about this book!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =========================================
+     كتب تانية ممكن تعجبك (Related Products) - بتتملى ديناميكيًا،
+     بتتخفي تلقائيًا لو مفيش منتجات تانية غير المنتج الحالي
+     ========================================= -->
+<section class="related-products-section section-plain reveal" id="relatedProductsSection" hidden>
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title" data-i18n="product.relatedTitle">You Might Also Like</h2>
+            <p class="section-subtitle" data-i18n="product.relatedSubtitle">More treasures from our collection worth exploring</p>
+        </div>
+
+        <div class="related-products-carousel">
+            <button type="button" class="related-carousel-arrow related-carousel-arrow-left" id="relatedPrevBtn" aria-label="Previous books" data-i18n-aria-label="product.prevBooks">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </button>
+
+            <div class="related-products-track" id="related-products-grid">
+                <!-- بيتملى ديناميكيًا عن طريق js/script.js -->
+            </div>
+
+            <button type="button" class="related-carousel-arrow related-carousel-arrow-right" id="relatedNextBtn" aria-label="Next books" data-i18n-aria-label="product.nextBooks">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 18l6-6-6-6"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</section>
+
+<!-- الخط الفاصل قبل الفوتر -->
+<div class="elegant-section-divider reveal">
+    <div class="divider-line-left"></div>
+    <div class="divider-center-icon">
+        <span class="hollow-dot"></span>
+        <div class="sun-emblem">
+            <img src="assets/sun-icon.png" alt="Sun icon" />
+        </div>
+        <span class="hollow-dot"></span>
+    </div>
+    <div class="divider-line-right"></div>
+</div>
+
+<div data-include="components/footer.html"></div>
+
+<!-- زرار الواتساب العايم -->
+<!-- استبدل الرقم 201xxxxxxxxx برقمك مع كود الدولة -->
+<a href="https://wa.me/201000000000" target="_blank" class="whatsapp-float" aria-label="Chat with us on WhatsApp">
+    <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
+    </svg>
+</a>
+
+<!-- شريط الشراء الثابت تحت - يظهر بس في الموبايل عشان السعر وزرار الشراء يفضلوا في الشاشة طول الوقت -->
+<div class="mobile-buy-bar" id="mobileBuyBar" hidden>
+    <div class="mobile-buy-bar-price">
+        <span class="mobile-buy-bar-label" data-i18n="product.price">Price</span>
+        <span class="mobile-buy-bar-value" id="mobileBuyBarPrice">LE 0.00</span>
+    </div>
+    <button type="button" class="btn-shop mobile-buy-bar-btn" id="mobileBuyBarBtn" data-i18n="product.addToCart">Add to Cart</button>
+</div>
+
+<script src="components/loader.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/api.js"></script>
+<script src="js/script.js"></script>
+</body>
+</html>
