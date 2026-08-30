@@ -27,6 +27,13 @@ const productSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    // نسخة عربية اختيارية من الوصف - لو فاضية، الموقع بيستخدم الوصف الإنجليزي
+    // حتى في وضع اللغة العربية (بدل ما يبان فاضي)
+    descriptionAr: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     type: {
       type: String,
       enum: ['physical', 'digital'],

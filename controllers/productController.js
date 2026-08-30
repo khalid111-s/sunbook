@@ -29,7 +29,7 @@ const getProduct = async (req, res) => {
 // @route   POST /api/products
 // @access  Private/Admin
 const createProduct = async (req, res) => {
-  const { title, price, priceEUR, image, description, type, badges, featured, order, inStock, egyptOnly, trackStock, stockCount } = req.body;
+  const { title, price, priceEUR, image, description, descriptionAr, type, badges, featured, order, inStock, egyptOnly, trackStock, stockCount } = req.body;
 
   const product = await Product.create({
     title,
@@ -37,6 +37,7 @@ const createProduct = async (req, res) => {
     priceEUR: priceEUR || null,
     image,
     description,
+    descriptionAr,
     type,
     badges,
     featured,
@@ -54,7 +55,7 @@ const createProduct = async (req, res) => {
 // @route   PUT /api/products/:id
 // @access  Private/Admin
 const updateProduct = async (req, res) => {
-  const { title, price, priceEUR, image, description, type, badges, featured, order, inStock, egyptOnly, trackStock, stockCount } = req.body;
+  const { title, price, priceEUR, image, description, descriptionAr, type, badges, featured, order, inStock, egyptOnly, trackStock, stockCount } = req.body;
 
   const product = await Product.findByIdAndUpdate(
     req.params.id,
@@ -64,6 +65,7 @@ const updateProduct = async (req, res) => {
       priceEUR: priceEUR || null,
       image,
       description,
+      descriptionAr,
       type,
       badges,
       featured,
