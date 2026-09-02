@@ -177,7 +177,7 @@ const createBooking = async (req, res) => {
   if (isKashierConfigured()) {
     try {
       const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
-      const merchantRedirect = encodeURIComponent(`${frontendBase}/profile.html?tab=sessions&kashier_return=1&booking=${booking._id}`);
+      const merchantRedirect = `${frontendBase}/profile.html?tab=sessions&kashier_return=1&booking=${booking._id}`;
 
       const paymentData = createKashierPaymentIntent({
         orderId: booking._id.toString(),

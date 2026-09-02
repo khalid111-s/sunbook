@@ -21,9 +21,14 @@ function isKashierConfigured() {
  */
 function generateOrderHash({ orderId, amount, currency }) {
   const mid = process.env.KASHIER_MID;
-  const secret = process.env.KASHIER_SECRET_KEY;
+  // مهم: hash صفحة الدفع (Hosted Payment Page) لازم يتعمل بـ Payment API Key
+  // (اللي في صورة "Payment API Keys" عند Kashier)، مش بـ Secret Key. الـ Secret Key
+  // ده مخصص بس للـ API calls السيرفر-لسيرفر (queryKashierOrder / refundKashierTransaction)
+  // اللي بتتبعت لـ https://api.kashier.io بهيدر Authorization. استخدام الغلط منهم هو
+  // اللي بيسبب "Kashier failed to authenticate this request".
+  const paymentApiKey = process.env.KASHIER_API_KEY;
   const path = `/?payment=${mid}.${orderId}.${amount}.${currency}`;
-  return crypto.createHmac('sha256', secret).update(path).digest('hex');
+  return crypto.createHmac('sha256', paymentApiKey).update(path).digest('hex');
 }
 
 /**

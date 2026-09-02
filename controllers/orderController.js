@@ -124,7 +124,7 @@ const createOrder = async (req, res) => {
   if (isKashierConfigured()) {
     try {
       const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
-      const merchantRedirect = encodeURIComponent(`${frontendBase}/checkout.html?kashier_return=1&order=${order._id}`);
+      const merchantRedirect = `${frontendBase}/checkout.html?kashier_return=1&order=${order._id}`;
 
       const paymentData = createKashierPaymentIntent({
         orderId: order._id.toString(),
