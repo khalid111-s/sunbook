@@ -1,7 +1,7 @@
 const Booking = require('../models/Booking');
 const Session = require('../models/Session');
 const User = require('../models/User');
-const { createPaytabsPaymentIntent, isPaytabsConfigured, refundPaytabsTransaction } = require('../utils/paytabs');
+const { isKashierConfigured, createKashierPaymentIntent, verifyKashierWebhookSignature, refundKashierTransaction } = require('../utils/kashier');
 const { sendBookingConfirmationEmail, sendNewBookingAdminAlert, sendBookingReminderEmail, sendBookingCancelledEmail, sendSessionMissedEmail, sendBookingRescheduledEmail } = require('../utils/email');
 
 async function createSessionForBooking(booking) {
@@ -174,36 +174,27 @@ const createBooking = async (req, res) => {
 
   let paymentUrl = null;
 
-  if (isPaytabsConfigured()) {
+  if (isKashierConfigured()) {
     try {
       const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
-      const backendBase = process.env.BACKEND_URL || `https://${req.get('host')}`;
+      const merchantRedirect = encodeURIComponent(`${frontendBase}/profile.html?tab=sessions&kashier_return=1&booking=${booking._id}`);
 
-      const paymentData = await createPaytabsPaymentIntent({
+      const paymentData = createKashierPaymentIntent({
+        orderId: booking._id.toString(),
         amount: booking.price,
         currency: 'EGP',
-        cartId: booking._id.toString(),
-        description: `Session booking: ${booking.subject}`.slice(0, 250),
-        customer: {
-          name: req.user.name,
-          email: req.user.email,
-          phone: req.user.phone,
-          country: 'EG',
-          ip: req.ip,
-        },
-        callbackUrl: `${backendBase}/api/bookings/paytabs-callback`,
-        returnUrl: `${backendBase}/api/bookings/paytabs-return?booking=${booking._id}`,
+        merchantRedirect,
       });
 
-      booking.paytabsTranRef = paymentData.tranRef;
+      booking.kashierHash = paymentData.hash;
       await booking.save();
       paymentUrl = paymentData.redirectUrl;
     } catch (err) {
-      console.error('PayTabs Error (booking):', err.response?.data || err.message);
+      console.error('Kashier Error (booking):', err.response?.data || err.message);
     }
   }
 
-  if (!paymentUrl && !isPaytabsConfigured()) {
+  if (!paymentUrl && !isKashierConfigured()) {
     // وضع التطوير: تأكيد الحجز وإنشاء الجلسة بدون دفع
     await markBookingPaidAndNotify(booking, req.user);
   }
@@ -370,13 +361,11 @@ const cancelBooking = async (req, res) => {
 
   // لو كان مدفوع فعليًا، نرجّع الفلوس قبل ما نلغي رسميًا
   let wasRefunded = false;
-  if (booking.status === 'paid' && booking.paytabsTranRef) {
+  if (booking.status === 'paid' && booking.kashierOrderId) {
     try {
-      const refundResult = await refundPaytabsTransaction({
-        tranRef: booking.paytabsTranRef,
+      const refundResult = await refundKashierTransaction({
+        kashierOrderId: booking.kashierOrderId,
         amount: booking.price,
-        currency: 'EGP',
-        cartId: booking._id.toString(),
         reason: 'Booking cancelled by user',
       });
       wasRefunded = refundResult.success;
@@ -413,51 +402,45 @@ const cancelBooking = async (req, res) => {
   res.json({ success: true, data: booking });
 };
 
-// @desc    PayTabs webhook - marks a booking as paid once payment is confirmed
-// @route   POST /api/bookings/paytabs-callback
-// @access  Public (called by PayTabs' servers, server-to-server)
-const paytabsCallback = async (req, res) => {
+// @desc    Kashier webhook - marks a booking as paid once payment is confirmed
+// @route   POST /api/bookings/kashier-webhook
+// @access  Public (called by Kashier's servers, server-to-server, signed with x-kashier-signature)
+const kashierWebhook = async (req, res) => {
   try {
-    const body = req.body || {};
-    const cartId = body.cart_id;
-    const tranRef = body.tran_ref;
-    const responseStatus = body.payment_result?.response_status; // 'A' = Approved
-
-    if (!cartId && !tranRef) {
-      return res.status(400).json({ message: 'Invalid callback data' });
+    const { event, data } = req.body || {};
+    if (!data || !data.merchantOrderId) {
+      return res.status(400).json({ message: 'Invalid webhook data' });
     }
 
-    const booking = cartId
-      ? await Booking.findById(cartId).catch(() => null)
-      : await Booking.findOne({ paytabsTranRef: tranRef });
+    const signature = req.header('x-kashier-signature');
+    if (!verifyKashierWebhookSignature(data, signature)) {
+      console.error('Kashier webhook: invalid signature for booking', data.merchantOrderId);
+      return res.status(401).json({ message: 'Invalid signature' });
+    }
 
+    const booking = await Booking.findById(data.merchantOrderId).catch(() => null);
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-    if (tranRef) booking.paytabsTranRef = tranRef;
+    if (data.kashierOrderId || data.orderId) {
+      booking.kashierOrderId = data.kashierOrderId || data.orderId;
+    }
 
-    if (responseStatus === 'A') {
+    if (event === 'pay' && data.status === 'SUCCESS') {
       await markBookingPaidAndNotify(booking);
-    } else {
+    } else if (event === 'pay') {
       booking.status = 'cancelled';
+      await booking.save();
+    } else {
       await booking.save();
     }
 
-    res.json({ success: true, message: 'Booking status updated' });
+    res.status(200).json({ success: true });
   } catch (error) {
-    console.error('PayTabs callback error (booking):', error);
+    console.error('Kashier webhook error (booking):', error);
     res.status(500).json({ success: false, message: error.message });
   }
-};
-
-// @desc    Bridge endpoint for PayTabs' return redirect - bounces the browser back
-//          to the profile page's sessions tab with a GET request.
-// @route   ALL /api/bookings/paytabs-return
-// @access  Public
-const paytabsReturnRedirect = (req, res) => {
-  const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
-  res.redirect(302, `${frontendBase}/profile.html?tab=sessions&paytabs_return=1`);
 };
 
 // @desc    Sends a reminder email to any student whose paid session starts in the next ~10 minutes
@@ -544,6 +527,5 @@ module.exports = {
   cancelBooking,
   rescheduleBooking,
   sendUpcomingReminders,
-  paytabsCallback,
-  paytabsReturnRedirect,
+  kashierWebhook,
 };

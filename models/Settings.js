@@ -5,8 +5,8 @@ const mongoose = require('mongoose');
 const settingsSchema = new mongoose.Schema(
   {
     key: { type: String, default: 'general', unique: true },
-    // سعر تحويل اليورو للجنيه المصري - بيُستخدم وقت تحصيل الدفع الفعلي عبر Paymob
-    // (العرض للزائر يفضل باليورو، لكن التحصيل الحقيقي بيتحول لجنيه بالسعر ده أولًا)
+    // سعر تحويل اليورو للجنيه المصري - كان بيُستخدم وقت التحصيل عبر Paymob (اللي كان بيقبل جنيه بس).
+    // مبقاش مستخدم في التحصيل الفعلي مع Kashier لأنه بيقبل EUR مباشرة، لكن سايبينه لو احتجناه لعرض تقريبي.
     eurToEgpRate: { type: Number, default: 60, min: 1 },
   },
   { timestamps: true }

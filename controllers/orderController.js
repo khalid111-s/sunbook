@@ -2,8 +2,7 @@ const Order = require('../models/Order');
 const Booking = require('../models/Booking');
 const PromoCode = require('../models/PromoCode');
 const Product = require('../models/Product');
-const { createPaymobPaymentIntent } = require('../utils/paymob');
-const { createPaytabsPaymentIntent, isPaytabsConfigured, queryPaytabsTransaction, refundPaytabsTransaction } = require('../utils/paytabs');
+const { isKashierConfigured, createKashierPaymentIntent, verifyKashierWebhookSignature, queryKashierOrder, refundKashierTransaction } = require('../utils/kashier');
 const { getDateRange, dateFormatForUnit, keyForDate, buildBuckets } = require('../utils/dateRange');
 const { getOrCreateSettings } = require('./settingsController');
 const { sendOrderConfirmationEmail, sendNewOrderAdminAlert, sendOrderCancelledEmail } = require('../utils/email');
@@ -28,17 +27,6 @@ const markOrderPaidAndNotify = async (order) => {
   } else {
     await order.save();
   }
-};
-
-const paymobConfigured = () => {
-  const key = process.env.PAYMOB_API_KEY || '';
-  const integrationId = process.env.PAYMOB_INTEGRATION_ID || '';
-  const iframeId = process.env.PAYMOB_IFRAME_ID || '';
-  return (
-    key.length > 0 && !key.includes('your_paymob') &&
-    integrationId.length > 0 && !integrationId.includes('your_paymob') &&
-    iframeId.length > 0 && !iframeId.includes('your_paymob')
-  );
 };
 
 // @desc    Create an order (called from checkout after a purchase is completed)
@@ -132,68 +120,29 @@ const createOrder = async (req, res) => {
 
   let paymentUrl = null;
 
-  // --- الأولوية 1: PayTabs (بيدعم يورو حقيقي، مش تحويل يدوي) ---
-  if (isPaytabsConfigured()) {
+  // --- Kashier (بيدعم EGP/USD/GBP/EUR بشكل مباشر، من غير أي تحويل يدوي) ---
+  if (isKashierConfigured()) {
     try {
       const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
-      const backendBase = process.env.BACKEND_URL || `https://${req.get('host')}`;
+      const merchantRedirect = encodeURIComponent(`${frontendBase}/checkout.html?kashier_return=1&order=${order._id}`);
 
-      const paymentData = await createPaytabsPaymentIntent({
+      const paymentData = createKashierPaymentIntent({
+        orderId: order._id.toString(),
         amount: finalAmount,
         currency: orderCurrency,
-        cartId: order._id.toString(),
-        description: items.map((i) => i.title).join(', ').slice(0, 250),
-        customer: {
-          name: customerName || req.user.name,
-          email: req.user.email,
-          phone,
-          street: address,
-          city: governorate,
-          country: order.country === 'EG' ? 'EG' : (order.country || 'EG'),
-          ip: req.ip,
-        },
-        callbackUrl: `${backendBase}/api/orders/paytabs-callback`,
-        returnUrl: `${backendBase}/api/orders/paytabs-return?order=${order._id}`,
+        merchantRedirect,
       });
 
-      order.paytabsTranRef = paymentData.tranRef;
+      order.kashierHash = paymentData.hash;
       await order.save();
       paymentUrl = paymentData.redirectUrl;
     } catch (err) {
-      console.error('PayTabs Error (order):', err.response?.data || err.message);
+      console.error('Kashier Error (order):', err.response?.data || err.message);
     }
   }
 
-  // --- الأولوية 2: Paymob كـ fallback (لسه شغال لحجز الجلسات، وممكن يشتغل هنا برضو) ---
-  // ملحوظة: Paymob على حسابنا بيقبل جنيه بس، فلو الطلب باليورو لازم نحوّله لجنيه الأول
-  // بسعر الصرف المسجل في الإعدادات، عشان منقعش في نفس مشكلة "التحصيل بالرقم غلط".
-  if (!paymentUrl && paymobConfigured()) {
-    try {
-      let amountForPaymob = finalAmount;
-      if (orderCurrency === 'EUR') {
-        const settings = await getOrCreateSettings();
-        amountForPaymob = Math.round(finalAmount * settings.eurToEgpRate * 100) / 100;
-        order.chargedAmountEGP = amountForPaymob;
-      }
-
-      const paymentData = await createPaymobPaymentIntent({
-        price: amountForPaymob,
-        student: req.user._id,
-      });
-      order.paymobOrderId = paymentData.orderId;
-      order.paymobPaymentKey = paymentData.paymentKey;
-      await order.save();
-
-      if (process.env.PAYMOB_IFRAME_ID) {
-        paymentUrl = `https://accept.paymob.com/api/acceptance/iframes/${process.env.PAYMOB_IFRAME_ID}?payment_token=${paymentData.paymentKey}`;
-      }
-    } catch (err) {
-      console.error('Paymob Error (order):', err.message);
-    }
-  }
-
-  // --- وضع التطوير: مفيش أي بوابة دفع متظبطة، نعتبر الطلب مدفوع مباشرة عشان تكمل تجربة الموقع ---
-  if (!paymentUrl && !isPaytabsConfigured() && !paymobConfigured()) {
+  // --- وضع التطوير: مفيش بوابة دفع متظبطة، نعتبر الطلب مدفوع مباشرة عشان تكمل تجربة الموقع ---
+  if (!paymentUrl && !isKashierConfigured()) {
     await markOrderPaidAndNotify(order);
   }
 
@@ -230,13 +179,11 @@ const cancelOrder = async (req, res) => {
   }
 
   // لو كان مدفوع فعليًا، نرجّع الفلوس قبل ما نلغي رسميًا
-  if (order.status === 'paid' && order.paytabsTranRef) {
+  if (order.status === 'paid' && order.kashierOrderId) {
     try {
-      const refundResult = await refundPaytabsTransaction({
-        tranRef: order.paytabsTranRef,
+      const refundResult = await refundKashierTransaction({
+        kashierOrderId: order.kashierOrderId,
         amount: order.totalAmount,
-        currency: order.currency || 'EGP',
-        cartId: order._id.toString(),
         reason: 'Order cancelled by customer',
       });
       if (!refundResult.success) {
@@ -425,72 +372,44 @@ const getOrderStats = async (req, res) => {
   });
 };
 
-// @desc    Paymob webhook - marks an order as paid once payment is confirmed
-// @route   POST /api/orders/paymob-callback
-// @access  Public (called by Paymob's servers)
-const paymobCallback = async (req, res) => {
+// @desc    Kashier webhook - marks an order as paid (or refunded) once payment is confirmed
+// @route   POST /api/orders/kashier-webhook
+// @access  Public (called by Kashier's servers, server-to-server, signed with x-kashier-signature)
+const kashierWebhook = async (req, res) => {
   try {
-    const { obj } = req.body;
-    if (!obj) {
-      return res.status(400).json({ message: 'Invalid callback data' });
+    const { event, data } = req.body || {};
+    if (!data || !data.merchantOrderId) {
+      return res.status(400).json({ message: 'Invalid webhook data' });
     }
 
-    const orderId = obj.order?.id || obj.order_id;
-    const success = obj.success === true || obj.payment_status === 'PAID';
-
-    if (!success) {
-      return res.json({ success: false, message: 'Payment not successful' });
+    const signature = req.header('x-kashier-signature');
+    if (!verifyKashierWebhookSignature(data, signature)) {
+      console.error('Kashier webhook: invalid signature for order', data.merchantOrderId);
+      return res.status(401).json({ message: 'Invalid signature' });
     }
 
-    const order = await Order.findOne({ paymobOrderId: String(orderId) });
+    const order = await Order.findById(data.merchantOrderId).catch(() => null);
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    await markOrderPaidAndNotify(order);
-
-    res.json({ success: true, message: 'Order payment confirmed' });
-  } catch (error) {
-    console.error('Paymob callback error (order):', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// @desc    PayTabs webhook - marks an order as paid once payment is confirmed
-// @route   POST /api/orders/paytabs-callback
-// @access  Public (called by PayTabs' servers, server-to-server)
-const paytabsCallback = async (req, res) => {
-  try {
-    const body = req.body || {};
-    // PayTabs بيبعت cart_id (بنبعته احنا وقت إنشاء الطلب = Order._id) وtran_ref ونتيجة الدفع
-    const cartId = body.cart_id;
-    const tranRef = body.tran_ref;
-    const responseStatus = body.payment_result?.response_status; // 'A' = Approved
-
-    if (!cartId && !tranRef) {
-      return res.status(400).json({ message: 'Invalid callback data' });
+    // بنسجّل orderId الداخلي بتاع Kashier (مش نفس معرّف الطلب عندنا) - محتاجينه لو عملنا refund بعدين
+    if (data.kashierOrderId || data.orderId) {
+      order.kashierOrderId = data.kashierOrderId || data.orderId;
     }
 
-    const order = cartId
-      ? await Order.findById(cartId).catch(() => null)
-      : await Order.findOne({ paytabsTranRef: tranRef });
-
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
-
-    if (tranRef) order.paytabsTranRef = tranRef;
-
-    if (responseStatus === 'A') {
+    if (event === 'pay' && data.status === 'SUCCESS') {
       await markOrderPaidAndNotify(order);
-    } else {
+    } else if (event === 'pay') {
       order.status = 'cancelled';
+      await order.save();
+    } else {
       await order.save();
     }
 
-    res.json({ success: true, message: 'Order status updated' });
+    res.status(200).json({ success: true });
   } catch (error) {
-    console.error('PayTabs callback error (order):', error);
+    console.error('Kashier webhook error (order):', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -512,36 +431,27 @@ const getOrderById = async (req, res) => {
     throw new Error('Not authorized to view this order');
   }
 
-  // لو الطلب لسه "pending" ومعاه مرجع PayTabs، نسأل PayTabs مباشرة عن الحالة الحقيقية
-  // بدل ما نستنى الإشعار (webhook) بس - ده بيحل مشكلة إشعارات ماوصلتش أو اتأخرت
-  if (order.status === 'pending' && order.paytabsTranRef) {
+  // لو الطلب لسه "pending"، نسأل Kashier مباشرة عن الحالة الحقيقية بدل ما نستنى
+  // الإشعار (webhook) بس - ده بيحل مشكلة إشعارات ماوصلتش أو اتأخرت
+  if (order.status === 'pending' && isKashierConfigured()) {
     try {
-      const result = await queryPaytabsTransaction(order.paytabsTranRef);
-      if (result.responseStatus === 'A') {
+      const result = await queryKashierOrder(order._id.toString());
+      const orderStatus = result?.response?.status; // 'CAPTURED' = نجح
+      if (orderStatus === 'CAPTURED') {
+        if (result?.response?.orderId) order.kashierOrderId = result.response.orderId;
         await markOrderPaidAndNotify(order);
-      } else if (['D', 'E', 'V'].includes(result.responseStatus)) {
+      } else if (['FAILED', 'DECLINED', 'VOIDED'].includes(orderStatus)) {
         order.status = 'cancelled';
         await order.save();
       }
-      // أي حالة تانية (زي 'H' معلّق أو 'P' لسه شغالة) بنسيبها pending ونجرب تاني بعدين
+      // أي حالة تانية (لسه معلّقة) بنسيبها pending ونجرب تاني بعدين
     } catch (err) {
-      console.error('PayTabs live status check failed:', err.response?.data || err.message);
+      console.error('Kashier live status check failed:', err.response?.data || err.message);
       // مش هنوقف الطلب لو الاستعلام فشل - هنرجع بحالة الطلب الحالية زي ما هي
     }
   }
 
   res.json({ success: true, data: order });
-};
-
-// @desc    Bridge endpoint for PayTabs' return redirect (which may use POST, unlike a
-//          normal browser navigation) - static pages on Vercel reject POST with a 405,
-//          so we catch it here first and bounce the browser to checkout.html with a GET.
-// @route   ALL /api/orders/paytabs-return
-// @access  Public
-const paytabsReturnRedirect = (req, res) => {
-  const orderId = req.query.order || req.body?.order || '';
-  const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
-  res.redirect(302, `${frontendBase}/checkout.html?paytabs_return=1&order=${orderId}`);
 };
 
 module.exports = {
@@ -552,7 +462,5 @@ module.exports = {
   updateOrderFulfillment,
   getOrderById,
   getOrderStats,
-  paymobCallback,
-  paytabsCallback,
-  paytabsReturnRedirect,
+  kashierWebhook,
 };

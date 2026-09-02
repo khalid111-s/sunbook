@@ -9,8 +9,7 @@ const {
   cancelBooking,
   rescheduleBooking,
   sendUpcomingReminders,
-  paytabsCallback,
-  paytabsReturnRedirect,
+  kashierWebhook,
 } = require('../controllers/bookingController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -22,7 +21,6 @@ router.get('/availability-month', getMonthAvailability);
 router.get('/send-reminders', sendUpcomingReminders);
 router.patch('/:id/cancel', protect, cancelBooking);
 router.patch('/:id/reschedule', protect, rescheduleBooking);
-router.post('/paytabs-callback', paytabsCallback);
-router.all('/paytabs-return', paytabsReturnRedirect);
+router.post('/kashier-webhook', kashierWebhook);
 
 module.exports = router;

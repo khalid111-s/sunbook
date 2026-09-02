@@ -30,12 +30,10 @@ const orderSchema = new mongoose.Schema(
     discountAmount: { type: Number, default: 0 },
     // العملة اللي اتدفع بيها الطلب فعليًا (بتتحدد حسب بلد الزائر وقت الشراء)
     currency: { type: String, enum: ['EGP', 'EUR'], default: 'EGP' },
-    // لو الطلب كان باليورو، ده المبلغ الفعلي بالجنيه اللي اتحصّل عن طريق Paymob
-    // بعد التحويل بسعر الصرف وقت الطلب (Paymob بيتعامل بالجنيه بس على حسابنا الحالي)
+    // legacy: كان بيتسجل هنا المبلغ بالجنيه بعد التحويل وقت استخدام Paymob (مبقاش مستخدم مع Kashier
+    // لأنه بيقبل EGP/USD/GBP/EUR مباشرة من غير أي تحويل يدوي). سايبينه عشان الطلبات القديمة.
     chargedAmountEGP: { type: Number, default: null },
-    // ملحوظة: دلوقتي مفيش بوابة دفع حقيقية موصولة على شراء الكتب،
-    // فكل الطلبات بتتسجل بحالة "pending" لحد ما يتوصل Paymob فعليًا.
-    // بنمنع بيه إرسال إيميل التأكيد أكتر من مرة (ممكن الطلب يترفع "paid" من أكتر مصدر - callback أو فحص مباشر)
+    // بنمنع بيه إرسال إيميل التأكيد أكتر من مرة (ممكن الطلب يترفع "paid" من أكتر مصدر - webhook أو فحص مباشر)
     confirmationEmailSent: { type: Boolean, default: false },
     status: {
       type: String,
@@ -48,10 +46,10 @@ const orderSchema = new mongoose.Schema(
       enum: ['processing', 'shipped', 'delivered'],
       default: 'processing',
     },
-    paymobOrderId: { type: String },
-    paymobPaymentKey: { type: String },
-    // مرجع عملية الدفع عند PayTabs - بنستخدمه لمطابقة الـ webhook بالطلب ده
-    paytabsTranRef: { type: String },
+    // الـ hash اللي اتولّد وقت إنشاء صفحة الدفع (Kashier)
+    kashierHash: { type: String },
+    // orderId الداخلي عند Kashier - بيوصلنا من الـ webhook، ومحتاجينه لو عملنا refund بعدين
+    kashierOrderId: { type: String },
     // بلد الطلب - بيتاخد تلقائيًا من هيدر Vercel وقت إنشاء الطلب
     country: { type: String, default: 'Unknown' },
   },

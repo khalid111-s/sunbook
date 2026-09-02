@@ -41,9 +41,8 @@ const bookingSchema = new mongoose.Schema({
     enum: ['pending', 'paid', 'confirmed', 'cancelled', 'completed'], 
     default: 'pending' 
   },
-  paymobOrderId: { type: String },
-  paymobPaymentKey: { type: String },
-  paytabsTranRef: { type: String },
+  kashierHash: { type: String },
+  kashierOrderId: { type: String },
   notes: { type: String, trim: true },
   cancelledAt: { type: Date },
   cancellationReason: { type: String },

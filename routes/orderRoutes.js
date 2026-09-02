@@ -8,16 +8,12 @@ const {
   updateOrderFulfillment,
   getOrderById,
   getOrderStats,
-  paymobCallback,
-  paytabsCallback,
-  paytabsReturnRedirect,
+  kashierWebhook,
 } = require('../controllers/orderController');
 const { protect, authorize } = require('../middleware/auth');
 
 router.post('/', protect, createOrder);
-router.post('/paymob-callback', paymobCallback);
-router.post('/paytabs-callback', paytabsCallback);
-router.all('/paytabs-return', paytabsReturnRedirect);
+router.post('/kashier-webhook', kashierWebhook);
 router.get('/', protect, authorize('admin'), getOrders);
 router.get('/my-orders', protect, getMyOrders);
 router.get('/stats/summary', protect, authorize('admin'), getOrderStats);
