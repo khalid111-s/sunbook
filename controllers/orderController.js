@@ -135,11 +135,25 @@ const createOrder = async (req, res) => {
           email: req.user.email,
           phone,
         },
-        cartItems: items.map((i) => ({
-          name: i.title || i.name || 'Item',
-          price: i.price,
-          quantity: i.qty || 1,
-        })),
+        // فواتيرك بترفض أي معاملة لو مجموع (سعر × كمية) كل عنصر في cartItems مش مطابق
+        // بالظبط لـ cartTotal - وعندنا finalAmount ممكن يكون أقل من مجموع العناصر الأصلي
+        // بسبب خصم عضوية (بيتحسب في الفرونت) أو خصم بروموكود (بيتحسب فوق). فبنضيف هنا
+        // "بند خصم" بسعر سالب يساوي الفرق بالظبط، عشان المجموع يطابق cartTotal دايمًا.
+        cartItems: (() => {
+          const baseItems = items.map((i) => ({
+            name: i.title || i.name || 'Item',
+            price: i.price,
+            quantity: i.qty || 1,
+          }));
+          const rawItemsTotal = Math.round(
+            baseItems.reduce((sum, i) => sum + i.price * i.quantity, 0) * 100
+          ) / 100;
+          const diff = Math.round((finalAmount - rawItemsTotal) * 100) / 100;
+          if (diff !== 0) {
+            baseItems.push({ name: 'Discount', price: diff, quantity: 1 });
+          }
+          return baseItems;
+        })(),
         payLoad: { order_id: order._id.toString() },
         redirectionUrls: {
           successUrl: `${frontendBase}/checkout.html?fawaterak_return=1&order=${order._id}`,
