@@ -1,7 +1,7 @@
 const Booking = require('../models/Booking');
 const Session = require('../models/Session');
 const User = require('../models/User');
-const { isFawaterakConfigured, createFawaterakTransaction, refundFawaterakTransaction, verifyPaidWebhook, verifyFailedWebhook, verifyCancelWebhook } = require('../utils/fawaterak');
+const { isFawaterakConfigured, createFawaterakTransaction, refundFawaterakTransaction } = require('../utils/fawaterak');
 const { sendBookingConfirmationEmail, sendNewBookingAdminAlert, sendBookingReminderEmail, sendBookingCancelledEmail, sendSessionMissedEmail, sendBookingRescheduledEmail } = require('../utils/email');
 
 async function createSessionForBooking(booking) {
@@ -196,6 +196,8 @@ const createBooking = async (req, res) => {
           failUrl: `${frontendBase}/profile.html?tab=sessions&fawaterak_return=1&booking=${booking._id}&status=failed`,
           pendingUrl: `${frontendBase}/profile.html?tab=sessions&fawaterak_return=1&booking=${booking._id}&status=pending`,
           backUrl: `${frontendBase}/profile.html?tab=sessions`,
+          // نفس نقطة استقبال الطلبات بالظبط - الكنترولر بيفرّق تلقائيًا إنه حجز مش طلب
+          webhookUrl: `${process.env.BACKEND_URL}/api/payments/fawaterak-webhook/paid_json`,
         },
       });
 
@@ -415,99 +417,6 @@ const cancelBooking = async (req, res) => {
   res.json({ success: true, data: booking });
 };
 
-// @desc    Webhook فواتيرك - بيوصل لما الدفع ينجح أو يبقى معلّق
-// @route   POST /api/bookings/fawaterak-webhook/paid
-const fawaterakPaidWebhook = async (req, res) => {
-  try {
-    const body = req.body || {};
-    if (!verifyPaidWebhook(body)) {
-      console.error('Fawaterak paid webhook: invalid signature (booking)');
-      return res.status(401).json({ status: 'error' });
-    }
-
-    let bookingId;
-    try {
-      bookingId = JSON.parse(body.pay_load || '{}').booking_id;
-    } catch {
-      bookingId = null;
-    }
-    if (!bookingId) return res.status(400).json({ status: 'error', message: 'Missing booking_id in pay_load' });
-
-    const booking = await Booking.findById(bookingId).catch(() => null);
-    if (!booking) return res.status(404).json({ status: 'error', message: 'Booking not found' });
-
-    booking.fawaterakTransactionId = String(body.transaction_id);
-    if (body.status === 'paid') {
-      await markBookingPaidAndNotify(booking);
-    } else {
-      await booking.save();
-    }
-
-    res.status(200).json({ status: 'ok' });
-  } catch (error) {
-    console.error('Fawaterak paid webhook error (booking):', error);
-    res.status(500).json({ status: 'error' });
-  }
-};
-
-// @desc    Webhook فواتيرك - بيوصل لما محاولة الدفع تفشل
-// @route   POST /api/bookings/fawaterak-webhook/failed
-const fawaterakFailedWebhook = async (req, res) => {
-  try {
-    const body = req.body || {};
-    if (!verifyFailedWebhook(body)) {
-      console.error('Fawaterak failed webhook: invalid signature (booking)');
-      return res.status(401).json({ status: 'error' });
-    }
-
-    let bookingId;
-    try {
-      bookingId = JSON.parse(body.pay_load || '{}').booking_id;
-    } catch {
-      bookingId = null;
-    }
-    const booking = bookingId ? await Booking.findById(bookingId).catch(() => null) : null;
-    if (booking && booking.status !== 'paid') {
-      booking.status = 'cancelled';
-      await booking.save();
-    }
-
-    res.status(200).json({ status: 'ok' });
-  } catch (error) {
-    console.error('Fawaterak failed webhook error (booking):', error);
-    res.status(500).json({ status: 'error' });
-  }
-};
-
-// @desc    Webhook فواتيرك - بيوصل لما مرجع دفع (فوري/أمان) ينتهي أو يتلغي
-// @route   POST /api/bookings/fawaterak-webhook/cancel
-const fawaterakCancelWebhook = async (req, res) => {
-  try {
-    const body = req.body || {};
-    if (!verifyCancelWebhook(body)) {
-      console.error('Fawaterak cancel webhook: invalid signature (booking)');
-      return res.status(401).json({ status: 'error' });
-    }
-
-    let bookingId;
-    try {
-      bookingId = JSON.parse(body.pay_load || '{}').booking_id;
-    } catch {
-      bookingId = null;
-    }
-    const booking = bookingId ? await Booking.findById(bookingId).catch(() => null) : null;
-    if (booking && booking.status !== 'paid') {
-      booking.status = 'cancelled';
-      await booking.save();
-    }
-
-    res.status(200).json({ status: 'ok' });
-  } catch (error) {
-    console.error('Fawaterak cancel webhook error (booking):', error);
-    res.status(500).json({ status: 'error' });
-  }
-};
-
 // @desc    Sends a reminder email to any student whose paid session starts in the next ~10 minutes
 //          and hasn't been reminded yet. Meant to be called periodically by an external cron
 //          (e.g. cron-job.org) hitting this endpoint every 5 minutes with the secret key.
@@ -592,7 +501,5 @@ module.exports = {
   cancelBooking,
   rescheduleBooking,
   sendUpcomingReminders,
-  fawaterakPaidWebhook,
-  fawaterakFailedWebhook,
-  fawaterakCancelWebhook,
+  markBookingPaidAndNotify,
 };

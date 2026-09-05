@@ -2,7 +2,7 @@ const Order = require('../models/Order');
 const Booking = require('../models/Booking');
 const PromoCode = require('../models/PromoCode');
 const Product = require('../models/Product');
-const { isFawaterakConfigured, createFawaterakTransaction, refundFawaterakTransaction, verifyPaidWebhook, verifyFailedWebhook, verifyCancelWebhook } = require('../utils/fawaterak');
+const { isFawaterakConfigured, createFawaterakTransaction, refundFawaterakTransaction } = require('../utils/fawaterak');
 const { getDateRange, dateFormatForUnit, keyForDate, buildBuckets } = require('../utils/dateRange');
 const { getOrCreateSettings } = require('./settingsController');
 const { sendOrderConfirmationEmail, sendNewOrderAdminAlert, sendOrderCancelledEmail } = require('../utils/email');
@@ -146,8 +146,10 @@ const createOrder = async (req, res) => {
           failUrl: `${frontendBase}/checkout.html?fawaterak_return=1&order=${order._id}&status=failed`,
           pendingUrl: `${frontendBase}/checkout.html?fawaterak_return=1&order=${order._id}&status=pending`,
           backUrl: `${frontendBase}/checkout.html`,
-          // الـ webhooks (paid/failed/cancel) متظبطة من لوحة تحكم فواتيرك مباشرة
-          // (Integrations -> Webhooks/redirections URLs) بدل ما نبعتها هنا مع كل طلب.
+          // بنبعت رابط الـ webhook صراحة هنا (بدل ما نعتمد على إعداد لوحة التحكم بس) عشان
+          // نضمن إن كل معاملة موجّهة لنقطة الاستقبال الموحّدة - _json مطلوبة في آخر الرابط
+          // عشان فواتيرك تبعت البيانات JSON مش form-data (زي ما التوثيق الرسمي بينص)
+          webhookUrl: `${process.env.BACKEND_URL}/api/payments/fawaterak-webhook/paid_json`,
         },
       });
 
@@ -390,100 +392,6 @@ const getOrderStats = async (req, res) => {
   });
 };
 
-// @desc    Webhook فواتيرك - بيوصل لما الدفع ينجح أو يبقى معلّق (Fawry/Aman/Masary)
-// @route   POST /api/orders/fawaterak-webhook/paid
-// @access  Public (محمي بالتوقيع HMAC مش بتسجيل دخول)
-const fawaterakPaidWebhook = async (req, res) => {
-  try {
-    const body = req.body || {};
-    if (!verifyPaidWebhook(body)) {
-      console.error('Fawaterak paid webhook: invalid signature');
-      return res.status(401).json({ status: 'error' });
-    }
-
-    let orderId;
-    try {
-      orderId = JSON.parse(body.pay_load || '{}').order_id;
-    } catch {
-      orderId = null;
-    }
-    if (!orderId) return res.status(400).json({ status: 'error', message: 'Missing order_id in pay_load' });
-
-    const order = await Order.findById(orderId).catch(() => null);
-    if (!order) return res.status(404).json({ status: 'error', message: 'Order not found' });
-
-    order.fawaterakTransactionId = String(body.transaction_id);
-    if (body.status === 'paid') {
-      await markOrderPaidAndNotify(order);
-    } else {
-      await order.save(); // status === 'pending' (فوري/أمان لسه العميل ما دفعش في الفرع)
-    }
-
-    res.status(200).json({ status: 'ok' });
-  } catch (error) {
-    console.error('Fawaterak paid webhook error (order):', error);
-    res.status(500).json({ status: 'error' });
-  }
-};
-
-// @desc    Webhook فواتيرك - بيوصل لما محاولة الدفع تفشل
-// @route   POST /api/orders/fawaterak-webhook/failed
-const fawaterakFailedWebhook = async (req, res) => {
-  try {
-    const body = req.body || {};
-    if (!verifyFailedWebhook(body)) {
-      console.error('Fawaterak failed webhook: invalid signature');
-      return res.status(401).json({ status: 'error' });
-    }
-
-    let orderId;
-    try {
-      orderId = JSON.parse(body.pay_load || '{}').order_id;
-    } catch {
-      orderId = null;
-    }
-    const order = orderId ? await Order.findById(orderId).catch(() => null) : null;
-    if (order && order.status !== 'paid') {
-      order.status = 'cancelled';
-      await order.save();
-    }
-
-    res.status(200).json({ status: 'ok' });
-  } catch (error) {
-    console.error('Fawaterak failed webhook error (order):', error);
-    res.status(500).json({ status: 'error' });
-  }
-};
-
-// @desc    Webhook فواتيرك - بيوصل لما مرجع دفع (فوري/أمان) ينتهي أو يتلغي من غير ما العميل يدفع
-// @route   POST /api/orders/fawaterak-webhook/cancel
-const fawaterakCancelWebhook = async (req, res) => {
-  try {
-    const body = req.body || {};
-    if (!verifyCancelWebhook(body)) {
-      console.error('Fawaterak cancel webhook: invalid signature');
-      return res.status(401).json({ status: 'error' });
-    }
-
-    let orderId;
-    try {
-      orderId = JSON.parse(body.pay_load || '{}').order_id;
-    } catch {
-      orderId = null;
-    }
-    const order = orderId ? await Order.findById(orderId).catch(() => null) : null;
-    if (order && order.status !== 'paid') {
-      order.status = 'cancelled';
-      await order.save();
-    }
-
-    res.status(200).json({ status: 'ok' });
-  } catch (error) {
-    console.error('Fawaterak cancel webhook error (order):', error);
-    res.status(500).json({ status: 'error' });
-  }
-};
-
 // @desc    Get a single order (used by the checkout return page to confirm payment status)
 // @route   GET /api/orders/:id
 // @access  Private (owner or admin)
@@ -516,7 +424,5 @@ module.exports = {
   updateOrderFulfillment,
   getOrderById,
   getOrderStats,
-  fawaterakPaidWebhook,
-  fawaterakFailedWebhook,
-  fawaterakCancelWebhook,
+  markOrderPaidAndNotify,
 };
