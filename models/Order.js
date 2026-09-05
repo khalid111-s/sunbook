@@ -46,10 +46,10 @@ const orderSchema = new mongoose.Schema(
       enum: ['processing', 'shipped', 'delivered'],
       default: 'processing',
     },
-    // الـ hash اللي اتولّد وقت إنشاء صفحة الدفع (Kashier)
-    kashierHash: { type: String },
-    // orderId الداخلي عند Kashier - بيوصلنا من الـ webhook، ومحتاجينه لو عملنا refund بعدين
-    kashierOrderId: { type: String },
+    // intent_key بتاع فواتيرك (Fawaterak) - بيوصلنا وقت إنشاء رابط الدفع، ومحتاجينه نربط بيه الـ webhooks والاسترجاع
+    fawaterakIntentKey: { type: String },
+    // transaction_id الرقمي بتاع فواتيرك - بيوصلنا من الـ webhook بعد الدفع، ومحتاجينه للاسترجاع (refund)
+    fawaterakTransactionId: { type: String },
     // بلد الطلب - بيتاخد تلقائيًا من هيدر Vercel وقت إنشاء الطلب
     country: { type: String, default: 'Unknown' },
   },

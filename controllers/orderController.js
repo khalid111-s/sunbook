@@ -2,7 +2,7 @@ const Order = require('../models/Order');
 const Booking = require('../models/Booking');
 const PromoCode = require('../models/PromoCode');
 const Product = require('../models/Product');
-const { isKashierConfigured, createKashierPaymentIntent, verifyKashierWebhookSignature, queryKashierOrder, refundKashierTransaction } = require('../utils/kashier');
+const { isFawaterakConfigured, createFawaterakTransaction, refundFawaterakTransaction, verifyPaidWebhook, verifyFailedWebhook, verifyCancelWebhook } = require('../utils/fawaterak');
 const { getDateRange, dateFormatForUnit, keyForDate, buildBuckets } = require('../utils/dateRange');
 const { getOrCreateSettings } = require('./settingsController');
 const { sendOrderConfirmationEmail, sendNewOrderAdminAlert, sendOrderCancelledEmail } = require('../utils/email');
@@ -120,29 +120,47 @@ const createOrder = async (req, res) => {
 
   let paymentUrl = null;
 
-  // --- Kashier (بيدعم EGP/USD/GBP/EUR بشكل مباشر، من غير أي تحويل يدوي) ---
-  if (isKashierConfigured()) {
+  // --- فواتيرك (Fawaterak) - بوابة الدفع الحالية ---
+  if (isFawaterakConfigured()) {
     try {
       const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
-      const merchantRedirect = `${frontendBase}/checkout.html?kashier_return=1&order=${order._id}`;
+      const [firstName, ...lastNameParts] = (customerName || req.user.name || '').trim().split(' ');
 
-      const paymentData = createKashierPaymentIntent({
-        orderId: order._id.toString(),
-        amount: finalAmount,
-        currency: orderCurrency,
-        merchantRedirect,
+      const { checkoutUrl, intentKey } = await createFawaterakTransaction({
+        cartTotal: finalAmount,
+        currency: orderCurrency === 'EGP' ? 'EGP' : orderCurrency, // فواتيرك بتستخدم "SR" للريال السعودي بس، مش لينا هنا
+        customer: {
+          first_name: firstName || 'Customer',
+          last_name: lastNameParts.join(' ') || '-',
+          email: req.user.email,
+          phone,
+        },
+        cartItems: items.map((i) => ({
+          name: i.title || i.name || 'Item',
+          price: i.price,
+          quantity: i.qty || 1,
+        })),
+        payLoad: { order_id: order._id.toString() },
+        redirectionUrls: {
+          successUrl: `${frontendBase}/checkout.html?fawaterak_return=1&order=${order._id}`,
+          failUrl: `${frontendBase}/checkout.html?fawaterak_return=1&order=${order._id}&status=failed`,
+          pendingUrl: `${frontendBase}/checkout.html?fawaterak_return=1&order=${order._id}&status=pending`,
+          backUrl: `${frontendBase}/checkout.html`,
+          // الـ webhooks (paid/failed/cancel) متظبطة من لوحة تحكم فواتيرك مباشرة
+          // (Integrations -> Webhooks/redirections URLs) بدل ما نبعتها هنا مع كل طلب.
+        },
       });
 
-      order.kashierHash = paymentData.hash;
+      order.fawaterakIntentKey = intentKey;
       await order.save();
-      paymentUrl = paymentData.redirectUrl;
+      paymentUrl = checkoutUrl;
     } catch (err) {
-      console.error('Kashier Error (order):', err.response?.data || err.message);
+      console.error('Fawaterak Error (order):', err.response?.data || err.message);
     }
   }
-
-  // --- وضع التطوير: مفيش بوابة دفع متظبطة، نعتبر الطلب مدفوع مباشرة عشان تكمل تجربة الموقع ---
-  if (!paymentUrl && !isKashierConfigured()) {
+  // --- مفيش أي بوابة دفع متظبطة (لسه محطتش مفاتيح فواتيرك في .env، أو حسابك عندهم لسه Setup in Progress) ---
+  // وضع التطوير: نعتبر الطلب مدفوع مباشرة عشان تقدر تكمل تجربة الموقع لحد ما فواتيرك تخلص التفعيل
+  if (!paymentUrl && !isFawaterakConfigured()) {
     await markOrderPaidAndNotify(order);
   }
 
@@ -179,15 +197,15 @@ const cancelOrder = async (req, res) => {
   }
 
   // لو كان مدفوع فعليًا، نرجّع الفلوس قبل ما نلغي رسميًا
-  if (order.status === 'paid' && order.kashierOrderId) {
+  if (order.status === 'paid' && order.fawaterakTransactionId) {
     try {
-      const refundResult = await refundKashierTransaction({
-        kashierOrderId: order.kashierOrderId,
+      const refundResult = await refundFawaterakTransaction({
+        transactionId: order.fawaterakTransactionId,
         amount: order.totalAmount,
         reason: 'Order cancelled by customer',
       });
-      if (!refundResult.success) {
-        console.error('Refund did not succeed for order', order._id, refundResult.raw);
+      if (refundResult.status !== 'success') {
+        console.error('Refund did not succeed for order', order._id, refundResult);
       }
     } catch (err) {
       console.error('Refund request failed for order', order._id, err.response?.data || err.message);
@@ -372,45 +390,97 @@ const getOrderStats = async (req, res) => {
   });
 };
 
-// @desc    Kashier webhook - marks an order as paid (or refunded) once payment is confirmed
-// @route   POST /api/orders/kashier-webhook
-// @access  Public (called by Kashier's servers, server-to-server, signed with x-kashier-signature)
-const kashierWebhook = async (req, res) => {
+// @desc    Webhook فواتيرك - بيوصل لما الدفع ينجح أو يبقى معلّق (Fawry/Aman/Masary)
+// @route   POST /api/orders/fawaterak-webhook/paid
+// @access  Public (محمي بالتوقيع HMAC مش بتسجيل دخول)
+const fawaterakPaidWebhook = async (req, res) => {
   try {
-    const { event, data } = req.body || {};
-    if (!data || !data.merchantOrderId) {
-      return res.status(400).json({ message: 'Invalid webhook data' });
+    const body = req.body || {};
+    if (!verifyPaidWebhook(body)) {
+      console.error('Fawaterak paid webhook: invalid signature');
+      return res.status(401).json({ status: 'error' });
     }
 
-    const signature = req.header('x-kashier-signature');
-    if (!verifyKashierWebhookSignature(data, signature)) {
-      console.error('Kashier webhook: invalid signature for order', data.merchantOrderId);
-      return res.status(401).json({ message: 'Invalid signature' });
+    let orderId;
+    try {
+      orderId = JSON.parse(body.pay_load || '{}').order_id;
+    } catch {
+      orderId = null;
     }
+    if (!orderId) return res.status(400).json({ status: 'error', message: 'Missing order_id in pay_load' });
 
-    const order = await Order.findById(data.merchantOrderId).catch(() => null);
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
+    const order = await Order.findById(orderId).catch(() => null);
+    if (!order) return res.status(404).json({ status: 'error', message: 'Order not found' });
 
-    // بنسجّل orderId الداخلي بتاع Kashier (مش نفس معرّف الطلب عندنا) - محتاجينه لو عملنا refund بعدين
-    if (data.kashierOrderId || data.orderId) {
-      order.kashierOrderId = data.kashierOrderId || data.orderId;
-    }
-
-    if (event === 'pay' && data.status === 'SUCCESS') {
+    order.fawaterakTransactionId = String(body.transaction_id);
+    if (body.status === 'paid') {
       await markOrderPaidAndNotify(order);
-    } else if (event === 'pay') {
+    } else {
+      await order.save(); // status === 'pending' (فوري/أمان لسه العميل ما دفعش في الفرع)
+    }
+
+    res.status(200).json({ status: 'ok' });
+  } catch (error) {
+    console.error('Fawaterak paid webhook error (order):', error);
+    res.status(500).json({ status: 'error' });
+  }
+};
+
+// @desc    Webhook فواتيرك - بيوصل لما محاولة الدفع تفشل
+// @route   POST /api/orders/fawaterak-webhook/failed
+const fawaterakFailedWebhook = async (req, res) => {
+  try {
+    const body = req.body || {};
+    if (!verifyFailedWebhook(body)) {
+      console.error('Fawaterak failed webhook: invalid signature');
+      return res.status(401).json({ status: 'error' });
+    }
+
+    let orderId;
+    try {
+      orderId = JSON.parse(body.pay_load || '{}').order_id;
+    } catch {
+      orderId = null;
+    }
+    const order = orderId ? await Order.findById(orderId).catch(() => null) : null;
+    if (order && order.status !== 'paid') {
       order.status = 'cancelled';
       await order.save();
-    } else {
+    }
+
+    res.status(200).json({ status: 'ok' });
+  } catch (error) {
+    console.error('Fawaterak failed webhook error (order):', error);
+    res.status(500).json({ status: 'error' });
+  }
+};
+
+// @desc    Webhook فواتيرك - بيوصل لما مرجع دفع (فوري/أمان) ينتهي أو يتلغي من غير ما العميل يدفع
+// @route   POST /api/orders/fawaterak-webhook/cancel
+const fawaterakCancelWebhook = async (req, res) => {
+  try {
+    const body = req.body || {};
+    if (!verifyCancelWebhook(body)) {
+      console.error('Fawaterak cancel webhook: invalid signature');
+      return res.status(401).json({ status: 'error' });
+    }
+
+    let orderId;
+    try {
+      orderId = JSON.parse(body.pay_load || '{}').order_id;
+    } catch {
+      orderId = null;
+    }
+    const order = orderId ? await Order.findById(orderId).catch(() => null) : null;
+    if (order && order.status !== 'paid') {
+      order.status = 'cancelled';
       await order.save();
     }
 
-    res.status(200).json({ success: true });
+    res.status(200).json({ status: 'ok' });
   } catch (error) {
-    console.error('Kashier webhook error (order):', error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Fawaterak cancel webhook error (order):', error);
+    res.status(500).json({ status: 'error' });
   }
 };
 
@@ -431,25 +501,9 @@ const getOrderById = async (req, res) => {
     throw new Error('Not authorized to view this order');
   }
 
-  // لو الطلب لسه "pending"، نسأل Kashier مباشرة عن الحالة الحقيقية بدل ما نستنى
-  // الإشعار (webhook) بس - ده بيحل مشكلة إشعارات ماوصلتش أو اتأخرت
-  if (order.status === 'pending' && isKashierConfigured()) {
-    try {
-      const result = await queryKashierOrder(order._id.toString());
-      const orderStatus = result?.response?.status; // 'CAPTURED' = نجح
-      if (orderStatus === 'CAPTURED') {
-        if (result?.response?.orderId) order.kashierOrderId = result.response.orderId;
-        await markOrderPaidAndNotify(order);
-      } else if (['FAILED', 'DECLINED', 'VOIDED'].includes(orderStatus)) {
-        order.status = 'cancelled';
-        await order.save();
-      }
-      // أي حالة تانية (لسه معلّقة) بنسيبها pending ونجرب تاني بعدين
-    } catch (err) {
-      console.error('Kashier live status check failed:', err.response?.data || err.message);
-      // مش هنوقف الطلب لو الاستعلام فشل - هنرجع بحالة الطلب الحالية زي ما هي
-    }
-  }
+  // ملحوظة: الاعتماد على webhooks فواتيرك (paid/failed/cancel) لتحديث حالة الطلب.
+  // ميزة "الاستعلام المباشر عن حالة الدفع" (كانت موجودة مع كاشير) اتشالت مؤقتًا هنا لحد ما
+  // نتأكد من شكل استجابة POST /api/v3/getTransactionData بتاعة فواتيرك بالظبط.
 
   res.json({ success: true, data: order });
 };
@@ -462,5 +516,7 @@ module.exports = {
   updateOrderFulfillment,
   getOrderById,
   getOrderStats,
-  kashierWebhook,
+  fawaterakPaidWebhook,
+  fawaterakFailedWebhook,
+  fawaterakCancelWebhook,
 };

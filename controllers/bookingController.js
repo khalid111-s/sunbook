@@ -1,7 +1,7 @@
 const Booking = require('../models/Booking');
 const Session = require('../models/Session');
 const User = require('../models/User');
-const { isKashierConfigured, createKashierPaymentIntent, verifyKashierWebhookSignature, refundKashierTransaction } = require('../utils/kashier');
+const { isFawaterakConfigured, createFawaterakTransaction, refundFawaterakTransaction, verifyPaidWebhook, verifyFailedWebhook, verifyCancelWebhook } = require('../utils/fawaterak');
 const { sendBookingConfirmationEmail, sendNewBookingAdminAlert, sendBookingReminderEmail, sendBookingCancelledEmail, sendSessionMissedEmail, sendBookingRescheduledEmail } = require('../utils/email');
 
 async function createSessionForBooking(booking) {
@@ -174,27 +174,40 @@ const createBooking = async (req, res) => {
 
   let paymentUrl = null;
 
-  if (isKashierConfigured()) {
+  // --- فواتيرك (Fawaterak) - بوابة الدفع الحالية ---
+  if (isFawaterakConfigured()) {
     try {
       const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
-      const merchantRedirect = `${frontendBase}/profile.html?tab=sessions&kashier_return=1&booking=${booking._id}`;
+      const [firstName, ...lastNameParts] = (req.user.name || '').trim().split(' ');
 
-      const paymentData = createKashierPaymentIntent({
-        orderId: booking._id.toString(),
-        amount: booking.price,
+      const { checkoutUrl, intentKey } = await createFawaterakTransaction({
+        cartTotal: booking.price,
         currency: 'EGP',
-        merchantRedirect,
+        customer: {
+          first_name: firstName || 'Customer',
+          last_name: lastNameParts.join(' ') || '-',
+          email: req.user.email,
+          phone: req.user.phone,
+        },
+        cartItems: [{ name: booking.subject || 'Session Booking', price: booking.price, quantity: 1 }],
+        payLoad: { booking_id: booking._id.toString() },
+        redirectionUrls: {
+          successUrl: `${frontendBase}/profile.html?tab=sessions&fawaterak_return=1&booking=${booking._id}`,
+          failUrl: `${frontendBase}/profile.html?tab=sessions&fawaterak_return=1&booking=${booking._id}&status=failed`,
+          pendingUrl: `${frontendBase}/profile.html?tab=sessions&fawaterak_return=1&booking=${booking._id}&status=pending`,
+          backUrl: `${frontendBase}/profile.html?tab=sessions`,
+        },
       });
 
-      booking.kashierHash = paymentData.hash;
+      booking.fawaterakIntentKey = intentKey;
       await booking.save();
-      paymentUrl = paymentData.redirectUrl;
+      paymentUrl = checkoutUrl;
     } catch (err) {
-      console.error('Kashier Error (booking):', err.response?.data || err.message);
+      console.error('Fawaterak Error (booking):', err.response?.data || err.message);
     }
   }
 
-  if (!paymentUrl && !isKashierConfigured()) {
+  if (!paymentUrl && !isFawaterakConfigured()) {
     // وضع التطوير: تأكيد الحجز وإنشاء الجلسة بدون دفع
     await markBookingPaidAndNotify(booking, req.user);
   }
@@ -361,16 +374,16 @@ const cancelBooking = async (req, res) => {
 
   // لو كان مدفوع فعليًا، نرجّع الفلوس قبل ما نلغي رسميًا
   let wasRefunded = false;
-  if (booking.status === 'paid' && booking.kashierOrderId) {
+  if (booking.status === 'paid' && booking.fawaterakTransactionId) {
     try {
-      const refundResult = await refundKashierTransaction({
-        kashierOrderId: booking.kashierOrderId,
+      const refundResult = await refundFawaterakTransaction({
+        transactionId: booking.fawaterakTransactionId,
         amount: booking.price,
         reason: 'Booking cancelled by user',
       });
-      wasRefunded = refundResult.success;
-      if (!refundResult.success) {
-        console.error('Refund did not succeed for booking', booking._id, refundResult.raw);
+      wasRefunded = refundResult.status === 'success';
+      if (!wasRefunded) {
+        console.error('Refund did not succeed for booking', booking._id, refundResult);
       }
     } catch (err) {
       console.error('Refund request failed for booking', booking._id, err.response?.data || err.message);
@@ -402,44 +415,96 @@ const cancelBooking = async (req, res) => {
   res.json({ success: true, data: booking });
 };
 
-// @desc    Kashier webhook - marks a booking as paid once payment is confirmed
-// @route   POST /api/bookings/kashier-webhook
-// @access  Public (called by Kashier's servers, server-to-server, signed with x-kashier-signature)
-const kashierWebhook = async (req, res) => {
+// @desc    Webhook فواتيرك - بيوصل لما الدفع ينجح أو يبقى معلّق
+// @route   POST /api/bookings/fawaterak-webhook/paid
+const fawaterakPaidWebhook = async (req, res) => {
   try {
-    const { event, data } = req.body || {};
-    if (!data || !data.merchantOrderId) {
-      return res.status(400).json({ message: 'Invalid webhook data' });
+    const body = req.body || {};
+    if (!verifyPaidWebhook(body)) {
+      console.error('Fawaterak paid webhook: invalid signature (booking)');
+      return res.status(401).json({ status: 'error' });
     }
 
-    const signature = req.header('x-kashier-signature');
-    if (!verifyKashierWebhookSignature(data, signature)) {
-      console.error('Kashier webhook: invalid signature for booking', data.merchantOrderId);
-      return res.status(401).json({ message: 'Invalid signature' });
+    let bookingId;
+    try {
+      bookingId = JSON.parse(body.pay_load || '{}').booking_id;
+    } catch {
+      bookingId = null;
     }
+    if (!bookingId) return res.status(400).json({ status: 'error', message: 'Missing booking_id in pay_load' });
 
-    const booking = await Booking.findById(data.merchantOrderId).catch(() => null);
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
+    const booking = await Booking.findById(bookingId).catch(() => null);
+    if (!booking) return res.status(404).json({ status: 'error', message: 'Booking not found' });
 
-    if (data.kashierOrderId || data.orderId) {
-      booking.kashierOrderId = data.kashierOrderId || data.orderId;
-    }
-
-    if (event === 'pay' && data.status === 'SUCCESS') {
+    booking.fawaterakTransactionId = String(body.transaction_id);
+    if (body.status === 'paid') {
       await markBookingPaidAndNotify(booking);
-    } else if (event === 'pay') {
-      booking.status = 'cancelled';
-      await booking.save();
     } else {
       await booking.save();
     }
 
-    res.status(200).json({ success: true });
+    res.status(200).json({ status: 'ok' });
   } catch (error) {
-    console.error('Kashier webhook error (booking):', error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Fawaterak paid webhook error (booking):', error);
+    res.status(500).json({ status: 'error' });
+  }
+};
+
+// @desc    Webhook فواتيرك - بيوصل لما محاولة الدفع تفشل
+// @route   POST /api/bookings/fawaterak-webhook/failed
+const fawaterakFailedWebhook = async (req, res) => {
+  try {
+    const body = req.body || {};
+    if (!verifyFailedWebhook(body)) {
+      console.error('Fawaterak failed webhook: invalid signature (booking)');
+      return res.status(401).json({ status: 'error' });
+    }
+
+    let bookingId;
+    try {
+      bookingId = JSON.parse(body.pay_load || '{}').booking_id;
+    } catch {
+      bookingId = null;
+    }
+    const booking = bookingId ? await Booking.findById(bookingId).catch(() => null) : null;
+    if (booking && booking.status !== 'paid') {
+      booking.status = 'cancelled';
+      await booking.save();
+    }
+
+    res.status(200).json({ status: 'ok' });
+  } catch (error) {
+    console.error('Fawaterak failed webhook error (booking):', error);
+    res.status(500).json({ status: 'error' });
+  }
+};
+
+// @desc    Webhook فواتيرك - بيوصل لما مرجع دفع (فوري/أمان) ينتهي أو يتلغي
+// @route   POST /api/bookings/fawaterak-webhook/cancel
+const fawaterakCancelWebhook = async (req, res) => {
+  try {
+    const body = req.body || {};
+    if (!verifyCancelWebhook(body)) {
+      console.error('Fawaterak cancel webhook: invalid signature (booking)');
+      return res.status(401).json({ status: 'error' });
+    }
+
+    let bookingId;
+    try {
+      bookingId = JSON.parse(body.pay_load || '{}').booking_id;
+    } catch {
+      bookingId = null;
+    }
+    const booking = bookingId ? await Booking.findById(bookingId).catch(() => null) : null;
+    if (booking && booking.status !== 'paid') {
+      booking.status = 'cancelled';
+      await booking.save();
+    }
+
+    res.status(200).json({ status: 'ok' });
+  } catch (error) {
+    console.error('Fawaterak cancel webhook error (booking):', error);
+    res.status(500).json({ status: 'error' });
   }
 };
 
@@ -527,5 +592,7 @@ module.exports = {
   cancelBooking,
   rescheduleBooking,
   sendUpcomingReminders,
-  kashierWebhook,
+  fawaterakPaidWebhook,
+  fawaterakFailedWebhook,
+  fawaterakCancelWebhook,
 };
