@@ -9,6 +9,10 @@ const HPP_BASE = IS_LIVE ? 'https://iframe.kashier.io' : 'https://test-iframe.ka
 const FEP_BASE = IS_LIVE ? 'https://fep.kashier.io' : 'https://test-fep.kashier.io';
 
 function isKashierConfigured() {
+  // --- بوابة الدفع متوقفة مؤقتًا لحد ما يتحدد الاشتراك مع بوابة نهائية ---
+  // لما تجهز، امسح السطرين دول (return false;) عشان يرجع يشتغل بالمفاتيح تحت زي ما هي.
+  return false;
+
   const mid = process.env.KASHIER_MID || '';
   const apiKey = process.env.KASHIER_API_KEY || '';
   const secretKey = process.env.KASHIER_SECRET_KEY || '';
