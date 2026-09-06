@@ -2,7 +2,6 @@ const Order = require('../models/Order');
 const Booking = require('../models/Booking');
 const PromoCode = require('../models/PromoCode');
 const Product = require('../models/Product');
-const { isFawaterakConfigured, createFawaterakTransaction, refundFawaterakTransaction } = require('../utils/fawaterak');
 const { getDateRange, dateFormatForUnit, keyForDate, buildBuckets } = require('../utils/dateRange');
 const { getOrCreateSettings } = require('./settingsController');
 const { sendOrderConfirmationEmail, sendNewOrderAdminAlert, sendOrderCancelledEmail } = require('../utils/email');
@@ -118,67 +117,12 @@ const createOrder = async (req, res) => {
     await Product.findByIdAndUpdate(update.id, { $inc: { stockCount: -update.qty } });
   }
 
-  let paymentUrl = null;
-
-  // --- فواتيرك (Fawaterak) - بوابة الدفع الحالية ---
-  if (isFawaterakConfigured()) {
-    try {
-      const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
-      const [firstName, ...lastNameParts] = (customerName || req.user.name || '').trim().split(' ');
-
-      const { checkoutUrl, intentKey } = await createFawaterakTransaction({
-        cartTotal: finalAmount,
-        currency: orderCurrency === 'EGP' ? 'EGP' : orderCurrency, // فواتيرك بتستخدم "SR" للريال السعودي بس، مش لينا هنا
-        customer: {
-          first_name: firstName || 'Customer',
-          last_name: lastNameParts.join(' ') || '-',
-          email: req.user.email,
-          phone,
-        },
-        // فواتيرك بترفض أي معاملة لو مجموع (سعر × كمية) كل عنصر في cartItems مش مطابق
-        // بالظبط لـ cartTotal - وعندنا finalAmount ممكن يكون أقل من مجموع العناصر الأصلي
-        // بسبب خصم عضوية (بيتحسب في الفرونت) أو خصم بروموكود (بيتحسب فوق). فبنضيف هنا
-        // "بند خصم" بسعر سالب يساوي الفرق بالظبط، عشان المجموع يطابق cartTotal دايمًا.
-        cartItems: (() => {
-          const baseItems = items.map((i) => ({
-            name: i.title || i.name || 'Item',
-            price: i.price,
-            quantity: i.qty || 1,
-          }));
-          const rawItemsTotal = Math.round(
-            baseItems.reduce((sum, i) => sum + i.price * i.quantity, 0) * 100
-          ) / 100;
-          const diff = Math.round((finalAmount - rawItemsTotal) * 100) / 100;
-          if (diff !== 0) {
-            baseItems.push({ name: 'Discount', price: diff, quantity: 1 });
-          }
-          return baseItems;
-        })(),
-        payLoad: { order_id: order._id.toString() },
-        redirectionUrls: {
-          successUrl: `${frontendBase}/checkout.html?fawaterak_return=1&order=${order._id}`,
-          failUrl: `${frontendBase}/checkout.html?fawaterak_return=1&order=${order._id}&status=failed`,
-          pendingUrl: `${frontendBase}/checkout.html?fawaterak_return=1&order=${order._id}&status=pending`,
-          backUrl: `${frontendBase}/checkout.html`,
-          // بنبعت رابط الـ webhook صراحة هنا (بدل ما نعتمد على إعداد لوحة التحكم بس) عشان
-          // نضمن إن كل معاملة موجّهة لنقطة الاستقبال الموحّدة - _json مطلوبة في آخر الرابط
-          // عشان فواتيرك تبعت البيانات JSON مش form-data (زي ما التوثيق الرسمي بينص)
-          webhookUrl: `${process.env.BACKEND_URL}/api/payments/fawaterak-webhook/paid_json`,
-        },
-      });
-
-      order.fawaterakIntentKey = intentKey;
-      await order.save();
-      paymentUrl = checkoutUrl;
-    } catch (err) {
-      console.error('Fawaterak Error (order):', err.response?.data || err.message);
-    }
-  }
-  // --- مفيش أي بوابة دفع متظبطة (لسه محطتش مفاتيح فواتيرك في .env، أو حسابك عندهم لسه Setup in Progress) ---
-  // وضع التطوير: نعتبر الطلب مدفوع مباشرة عشان تقدر تكمل تجربة الموقع لحد ما فواتيرك تخلص التفعيل
-  if (!paymentUrl && !isFawaterakConfigured()) {
-    await markOrderPaidAndNotify(order);
-  }
+  // --- مفيش بوابة دفع متصلة حاليًا (اتشالت فواتيرك) ---
+  // بشكل مؤقت لحد ما تتحدد بوابة دفع جديدة، أي طلب بيتحط "مدفوع" تلقائيًا فور إنشاءه.
+  // لما تضيف بوابة دفع جديدة، هنا بالظبط المكان اللي هيتحط فيه استدعاء إنشاء معاملة الدفع
+  // (زي ما كان شكل كود فواتيرك قبل كده)، وهيتشال السطر اللي تحت وقتها.
+  const paymentUrl = null;
+  await markOrderPaidAndNotify(order);
 
   res.status(201).json({ success: true, data: { order, paymentUrl } });
 };
@@ -212,23 +156,8 @@ const cancelOrder = async (req, res) => {
     throw new Error('This order has already shipped and can no longer be cancelled');
   }
 
-  // لو كان مدفوع فعليًا، نرجّع الفلوس قبل ما نلغي رسميًا
-  if (order.status === 'paid' && order.fawaterakTransactionId) {
-    try {
-      const refundResult = await refundFawaterakTransaction({
-        transactionId: order.fawaterakTransactionId,
-        amount: order.totalAmount,
-        reason: 'Order cancelled by customer',
-      });
-      if (refundResult.status !== 'success') {
-        console.error('Refund did not succeed for order', order._id, refundResult);
-      }
-    } catch (err) {
-      console.error('Refund request failed for order', order._id, err.response?.data || err.message);
-      res.status(500);
-      throw new Error('Could not process the refund right now. Please contact support.');
-    }
-  }
+  // ملحوظة: مفيش بوابة دفع متصلة حاليًا، فأي استرجاع فلوس لطلب مدفوع لازم يتم يدويًا
+  // (تحويل بنكي مباشر للعميل) من غير أي استرجاع أوتوماتيكي هنا.
 
   // نرجّع كل الكتب الفيزيكال اللي في الطلب ده للمخزون (لو كان بيتتبّع فعليًا)
   for (const item of order.items) {

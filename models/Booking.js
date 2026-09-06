@@ -41,9 +41,6 @@ const bookingSchema = new mongoose.Schema({
     enum: ['pending', 'paid', 'confirmed', 'cancelled', 'completed'], 
     default: 'pending' 
   },
-  // فواتيرك (Fawaterak) - intent_key وقت إنشاء رابط الدفع، وtransaction_id بعد الدفع (للاسترجاع)
-  fawaterakIntentKey: { type: String },
-  fawaterakTransactionId: { type: String },
   notes: { type: String, trim: true },
   cancelledAt: { type: Date },
   cancellationReason: { type: String },

@@ -46,10 +46,6 @@ const orderSchema = new mongoose.Schema(
       enum: ['processing', 'shipped', 'delivered'],
       default: 'processing',
     },
-    // intent_key بتاع فواتيرك (Fawaterak) - بيوصلنا وقت إنشاء رابط الدفع، ومحتاجينه نربط بيه الـ webhooks والاسترجاع
-    fawaterakIntentKey: { type: String },
-    // transaction_id الرقمي بتاع فواتيرك - بيوصلنا من الـ webhook بعد الدفع، ومحتاجينه للاسترجاع (refund)
-    fawaterakTransactionId: { type: String },
     // بلد الطلب - بيتاخد تلقائيًا من هيدر Vercel وقت إنشاء الطلب
     country: { type: String, default: 'Unknown' },
   },

@@ -1,7 +1,6 @@
 const Booking = require('../models/Booking');
 const Session = require('../models/Session');
 const User = require('../models/User');
-const { isFawaterakConfigured, createFawaterakTransaction, refundFawaterakTransaction } = require('../utils/fawaterak');
 const { sendBookingConfirmationEmail, sendNewBookingAdminAlert, sendBookingReminderEmail, sendBookingCancelledEmail, sendSessionMissedEmail, sendBookingRescheduledEmail } = require('../utils/email');
 
 async function createSessionForBooking(booking) {
@@ -172,47 +171,10 @@ const createBooking = async (req, res) => {
     status: 'pending',
   });
 
-  let paymentUrl = null;
-
-  // --- فواتيرك (Fawaterak) - بوابة الدفع الحالية ---
-  if (isFawaterakConfigured()) {
-    try {
-      const frontendBase = process.env.FRONTEND_URL || 'https://sun-book-front.vercel.app';
-      const [firstName, ...lastNameParts] = (req.user.name || '').trim().split(' ');
-
-      const { checkoutUrl, intentKey } = await createFawaterakTransaction({
-        cartTotal: booking.price,
-        currency: 'EGP',
-        customer: {
-          first_name: firstName || 'Customer',
-          last_name: lastNameParts.join(' ') || '-',
-          email: req.user.email,
-          phone: req.user.phone,
-        },
-        cartItems: [{ name: booking.subject || 'Session Booking', price: booking.price, quantity: 1 }],
-        payLoad: { booking_id: booking._id.toString() },
-        redirectionUrls: {
-          successUrl: `${frontendBase}/profile.html?tab=sessions&fawaterak_return=1&booking=${booking._id}`,
-          failUrl: `${frontendBase}/profile.html?tab=sessions&fawaterak_return=1&booking=${booking._id}&status=failed`,
-          pendingUrl: `${frontendBase}/profile.html?tab=sessions&fawaterak_return=1&booking=${booking._id}&status=pending`,
-          backUrl: `${frontendBase}/profile.html?tab=sessions`,
-          // نفس نقطة استقبال الطلبات بالظبط - الكنترولر بيفرّق تلقائيًا إنه حجز مش طلب
-          webhookUrl: `${process.env.BACKEND_URL}/api/payments/fawaterak-webhook/paid_json`,
-        },
-      });
-
-      booking.fawaterakIntentKey = intentKey;
-      await booking.save();
-      paymentUrl = checkoutUrl;
-    } catch (err) {
-      console.error('Fawaterak Error (booking):', err.response?.data || err.message);
-    }
-  }
-
-  if (!paymentUrl && !isFawaterakConfigured()) {
-    // وضع التطوير: تأكيد الحجز وإنشاء الجلسة بدون دفع
-    await markBookingPaidAndNotify(booking, req.user);
-  }
+  // --- مفيش بوابة دفع متصلة حاليًا (اتشالت فواتيرك) ---
+  // بشكل مؤقت لحد ما تتحدد بوابة دفع جديدة، أي حجز بيتأكد وتتعمل جلسته تلقائيًا فور إنشاءه.
+  const paymentUrl = null;
+  await markBookingPaidAndNotify(booking, req.user);
 
   res.status(201).json({
     success: true,
@@ -374,25 +336,9 @@ const cancelBooking = async (req, res) => {
     throw new Error('Sessions can only be cancelled at least 4 hours before the scheduled time');
   }
 
-  // لو كان مدفوع فعليًا، نرجّع الفلوس قبل ما نلغي رسميًا
-  let wasRefunded = false;
-  if (booking.status === 'paid' && booking.fawaterakTransactionId) {
-    try {
-      const refundResult = await refundFawaterakTransaction({
-        transactionId: booking.fawaterakTransactionId,
-        amount: booking.price,
-        reason: 'Booking cancelled by user',
-      });
-      wasRefunded = refundResult.status === 'success';
-      if (!wasRefunded) {
-        console.error('Refund did not succeed for booking', booking._id, refundResult);
-      }
-    } catch (err) {
-      console.error('Refund request failed for booking', booking._id, err.response?.data || err.message);
-      res.status(500);
-      throw new Error('Could not process the refund right now. Please contact support.');
-    }
-  }
+  // ملحوظة: مفيش بوابة دفع متصلة حاليًا، فأي استرجاع فلوس لحجز مدفوع لازم يتم يدويًا
+  // (تحويل بنكي مباشر للطالب) من غير أي استرجاع أوتوماتيكي هنا.
+  const wasRefunded = false;
 
   booking.status = 'cancelled';
   booking.cancelledAt = new Date();
