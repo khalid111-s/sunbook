@@ -29,7 +29,7 @@ const getProduct = async (req, res) => {
 // @route   POST /api/products
 // @access  Private/Admin
 const createProduct = async (req, res) => {
-  const { title, price, priceEUR, image, description, descriptionAr, type, badges, featured, order, inStock, egyptOnly, trackStock, stockCount, cardImage } = req.body;
+  const { title, price, priceEUR, image, description, descriptionAr, type, badges, featured, order, featuredOrder, showInAllProducts, inStock, egyptOnly, trackStock, stockCount, cardImage } = req.body;
 
   const product = await Product.create({
     title,
@@ -42,6 +42,8 @@ const createProduct = async (req, res) => {
     badges,
     featured,
     order,
+    featuredOrder,
+    showInAllProducts,
     inStock,
     egyptOnly,
     trackStock,
@@ -63,7 +65,7 @@ const createProduct = async (req, res) => {
 // @route   PUT /api/products/:id
 // @access  Private/Admin
 const updateProduct = async (req, res) => {
-  const { title, price, priceEUR, image, description, descriptionAr, type, badges, featured, order, inStock, egyptOnly, trackStock, stockCount, cardImage } = req.body;
+  const { title, price, priceEUR, image, description, descriptionAr, type, badges, featured, order, featuredOrder, showInAllProducts, inStock, egyptOnly, trackStock, stockCount, cardImage } = req.body;
 
   const product = await Product.findByIdAndUpdate(
     req.params.id,
@@ -78,6 +80,8 @@ const updateProduct = async (req, res) => {
       badges,
       featured,
       order,
+      featuredOrder,
+      showInAllProducts,
       inStock,
       egyptOnly,
       trackStock,
@@ -116,4 +120,32 @@ const deleteProduct = async (req, res) => {
   res.json({ success: true, data: {} });
 };
 
-module.exports = { getProducts, getProduct, createProduct, updateProduct, deleteProduct };
+// @desc    Bulk-update display order for a list of products in one go
+//          field: 'order' (All Products list) or 'featuredOrder' (Best Offers list) -
+//          the two are independent, so reordering one never touches the other.
+// @route   PUT /api/products/reorder
+// @access  Private/Admin
+// body: { field: 'order' | 'featuredOrder', items: [{ id, value }, ...] }
+const reorderProducts = async (req, res) => {
+  const { field, items } = req.body;
+
+  if (!['order', 'featuredOrder'].includes(field) || !Array.isArray(items) || !items.length) {
+    res.status(400);
+    throw new Error('Invalid reorder payload');
+  }
+
+  const ops = items
+    .filter((it) => it && it.id)
+    .map((it) => ({
+      updateOne: {
+        filter: { _id: it.id },
+        update: { $set: { [field]: Number(it.value) || 0 } },
+      },
+    }));
+
+  if (ops.length) await Product.bulkWrite(ops);
+
+  res.json({ success: true });
+};
+
+module.exports = { getProducts, getProduct, createProduct, updateProduct, deleteProduct, reorderProducts };

@@ -51,10 +51,24 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    // Controls display order (lower shows first)
+    // Controls display order in the "All Products" grid (lower shows first)
     order: {
       type: Number,
       default: 0,
+    },
+    // Controls display order inside the "Best Offers" section specifically -
+    // independent from "order" above, so dragging a product inside Best Offers
+    // never changes its position in All Products (and vice versa)
+    featuredOrder: {
+      type: Number,
+      default: 0,
+    },
+    // Only relevant when featured === true. If true (default), the product also
+    // shows up in "All Products" like normal. If false, it only shows in "Best Offers"
+    // and is hidden from the "All Products" grid to avoid duplication.
+    showInAllProducts: {
+      type: Boolean,
+      default: true,
     },
     inStock: {
       type: Boolean,
@@ -90,5 +104,6 @@ const productSchema = new mongoose.Schema(
 );
 
 productSchema.index({ featured: 1, order: 1 });
+productSchema.index({ featured: 1, featuredOrder: 1 });
 
 module.exports = mongoose.model('Product', productSchema);

@@ -6,10 +6,15 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
+  reorderProducts,
 } = require('../controllers/productController');
 const { protect, authorize } = require('../middleware/auth');
 
 router.get('/', getProducts);
+
+// لازم يفضل فوق route الـ '/:id' عشان express ميفهمش "reorder" على إنه :id
+router.put('/reorder', protect, authorize('admin'), reorderProducts);
+
 router.get('/:id', getProduct);
 
 router.post('/', protect, authorize('admin'), createProduct);
