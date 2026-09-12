@@ -6,7 +6,8 @@ const orderItemSchema = new mongoose.Schema(
     title: { type: String, required: true },
     price: { type: Number, required: true },
     qty: { type: Number, required: true, default: 1 },
-    type: { type: String, enum: ['physical', 'digital'], default: 'physical' },
+    // 'both' = نسخة فيزيكال ورقمية مع بعض في نفس الطلب لنفس المنتج
+    type: { type: String, enum: ['physical', 'digital', 'both'], default: 'physical' },
   },
   { _id: false }
 );

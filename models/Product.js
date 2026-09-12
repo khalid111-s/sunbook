@@ -34,9 +34,11 @@ const productSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    // 'both' = المنتج بيتباع كنسخة فيزيكال ورقمية مع بعض في نفس عملية الشراء
+    // (بيتعامل معاه في الشحن والمخزون زي physical، وفي التحميل والمكتبة الرقمية زي digital)
     type: {
       type: String,
-      enum: ['physical', 'digital'],
+      enum: ['physical', 'digital', 'both'],
       default: 'physical',
     },
     // Small labels shown on the product card, e.g. ['Paperback', 'English']

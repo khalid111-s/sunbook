@@ -40,7 +40,8 @@ const createOrder = async (req, res) => {
   }
 
   // --- التحقق من توفر المخزون للكتب الفيزيكال اللي بيتتبّع مخزونها فعليًا، قبل ما نأكد الطلب ---
-  const physicalItemsWithProduct = items.filter((i) => i.type === 'physical' && i.product);
+  // 'both' بيتحسب هنا كمان لأنه بيتضمن نسخة فيزيكال فعليًا بتاخد من المخزون زي physical تمامًا
+  const physicalItemsWithProduct = items.filter((i) => (i.type === 'physical' || i.type === 'both') && i.product);
   const stockUpdates = [];
   for (const item of physicalItemsWithProduct) {
     const product = await Product.findById(item.product);
@@ -145,7 +146,7 @@ const cancelOrder = async (req, res) => {
     throw new Error('Order is already cancelled');
   }
 
-  const hasPhysicalItem = order.items.some((i) => i.type === 'physical');
+  const hasPhysicalItem = order.items.some((i) => i.type === 'physical' || i.type === 'both');
   if (!hasPhysicalItem) {
     res.status(400);
     throw new Error('Digital orders cannot be cancelled since the files are delivered immediately upon payment');
@@ -161,7 +162,7 @@ const cancelOrder = async (req, res) => {
 
   // نرجّع كل الكتب الفيزيكال اللي في الطلب ده للمخزون (لو كان بيتتبّع فعليًا)
   for (const item of order.items) {
-    if (item.type === 'physical' && item.product) {
+    if ((item.type === 'physical' || item.type === 'both') && item.product) {
       const product = await Product.findById(item.product);
       if (product && product.trackStock) {
         await Product.findByIdAndUpdate(product._id, { $inc: { stockCount: item.qty } });
