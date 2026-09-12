@@ -94,9 +94,11 @@ const productSchema = new mongoose.Schema(
     cardImage: {
       width: { type: Number, default: 260 }, // max-width بالبكسل (ديسكتوب)
       height: { type: Number, default: 300 }, // max-height بالبكسل (ديسكتوب)
+      offsetX: { type: Number, default: 0 }, // إزاحة أفقية بالبكسل - ديسكتوب (+ لليمين / - للشمال)
       offsetY: { type: Number, default: 0 }, // إزاحة رأسية بالبكسل - ديسكتوب (+ لتحت / - لفوق)
       mobileWidth: { type: Number, default: 135 }, // max-width بالبكسل (موبايل)
       mobileHeight: { type: Number, default: 160 }, // max-height بالبكسل (موبايل)
+      mobileOffsetX: { type: Number, default: 0 }, // إزاحة أفقية بالبكسل - موبايل
       mobileOffsetY: { type: Number, default: 0 }, // إزاحة رأسية بالبكسل - موبايل
     },
   },

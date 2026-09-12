@@ -51,9 +51,11 @@ const createProduct = async (req, res) => {
     cardImage: {
       width: Number(cardImage?.width) || 260,
       height: Number(cardImage?.height) || 300,
+      offsetX: Number(cardImage?.offsetX) || 0,
       offsetY: Number(cardImage?.offsetY) || 0,
       mobileWidth: Number(cardImage?.mobileWidth) || 135,
       mobileHeight: Number(cardImage?.mobileHeight) || 160,
+      mobileOffsetX: Number(cardImage?.mobileOffsetX) || 0,
       mobileOffsetY: Number(cardImage?.mobileOffsetY) || 0,
     },
   });
@@ -89,9 +91,11 @@ const updateProduct = async (req, res) => {
       cardImage: {
         width: Number(cardImage?.width) || 260,
         height: Number(cardImage?.height) || 300,
+        offsetX: Number(cardImage?.offsetX) || 0,
         offsetY: Number(cardImage?.offsetY) || 0,
         mobileWidth: Number(cardImage?.mobileWidth) || 135,
         mobileHeight: Number(cardImage?.mobileHeight) || 160,
+        mobileOffsetX: Number(cardImage?.mobileOffsetX) || 0,
         mobileOffsetY: Number(cardImage?.mobileOffsetY) || 0,
       },
     },
