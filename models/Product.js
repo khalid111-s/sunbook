@@ -76,6 +76,12 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: [0, 'Stock count cannot be negative'],
     },
+    // بيتحكم في حجم/وضع صورة المنتج جوه الكارت (بدل ما نعدل الـ CSS يدويًا لكل صورة)
+    cardImage: {
+      width: { type: Number, default: 260 }, // max-width بالبكسل
+      height: { type: Number, default: 300 }, // max-height بالبكسل
+      offsetY: { type: Number, default: 0 }, // إزاحة رأسية بالبكسل (+ لتحت / - لفوق)
+    },
   },
   { timestamps: true }
 );

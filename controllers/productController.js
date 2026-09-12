@@ -29,7 +29,7 @@ const getProduct = async (req, res) => {
 // @route   POST /api/products
 // @access  Private/Admin
 const createProduct = async (req, res) => {
-  const { title, price, priceEUR, image, description, descriptionAr, type, badges, featured, order, inStock, egyptOnly, trackStock, stockCount } = req.body;
+  const { title, price, priceEUR, image, description, descriptionAr, type, badges, featured, order, inStock, egyptOnly, trackStock, stockCount, cardImage } = req.body;
 
   const product = await Product.create({
     title,
@@ -46,6 +46,11 @@ const createProduct = async (req, res) => {
     egyptOnly,
     trackStock,
     stockCount: trackStock ? Number(stockCount) || 0 : 0,
+    cardImage: {
+      width: Number(cardImage?.width) || 260,
+      height: Number(cardImage?.height) || 300,
+      offsetY: Number(cardImage?.offsetY) || 0,
+    },
   });
 
   res.status(201).json({ success: true, data: product });
@@ -55,7 +60,7 @@ const createProduct = async (req, res) => {
 // @route   PUT /api/products/:id
 // @access  Private/Admin
 const updateProduct = async (req, res) => {
-  const { title, price, priceEUR, image, description, descriptionAr, type, badges, featured, order, inStock, egyptOnly, trackStock, stockCount } = req.body;
+  const { title, price, priceEUR, image, description, descriptionAr, type, badges, featured, order, inStock, egyptOnly, trackStock, stockCount, cardImage } = req.body;
 
   const product = await Product.findByIdAndUpdate(
     req.params.id,
@@ -74,6 +79,11 @@ const updateProduct = async (req, res) => {
       egyptOnly,
       trackStock,
       stockCount: trackStock ? Number(stockCount) || 0 : 0,
+      cardImage: {
+        width: Number(cardImage?.width) || 260,
+        height: Number(cardImage?.height) || 300,
+        offsetY: Number(cardImage?.offsetY) || 0,
+      },
     },
     { new: true, runValidators: true }
   );
