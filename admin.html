@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | The Sun Book</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/png" href="assets/sun-icon.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        /* ستايل مخصص لصفحة الأدمن بس - بيستخدم نفس ألوان الموقع */
+        .admin-wrap {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px 80px;
+            color: #fff;
+            font-family: var(--font-main);
+        }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(216,176,86,0.3);
+            padding-bottom: 16px;
+        }
+        .admin-header h1 {
+            color: var(--gold-color);
+            font-family: var(--font-logo);
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .icon-gold {
+            width: 24px;
+            height: 24px;
+            color: var(--gold-color);
+            flex-shrink: 0;
+        }
+        .icon-gold-sm {
+            width: 16px;
+            height: 16px;
+            color: var(--gold-color);
+            flex-shrink: 0;
+            vertical-align: -3px;
+            margin-right: 4px;
+        }
+
+        /* ---- Tabs ---- */
+        .admin-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 26px;
+            border-bottom: 1px solid rgba(216,176,86,0.2);
+        }
+        .admin-tab-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: transparent;
+            border: none;
+            color: var(--text-gray);
+            padding: 10px 18px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+        .admin-tab-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+        .admin-tab-btn:hover { color: #fff; }
+        .admin-tab-btn.active {
+            color: var(--gold-color);
+            border-bottom-color: var(--gold-color);
+        }
+        .admin-logout-btn {
+            background: transparent;
+            border: 1px solid var(--gold-color);
+            color: var(--gold-color);
+            padding: 8px 18px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .admin-logout-btn:hover { background: var(--gold-color); color: #111; }
+
+        /* ---- Account switcher (تبديل بين حسابات الأدمن) ---- */
+        .admin-header-actions { display: flex; align-items: center; gap: 10px; position: relative; }
+        .admin-account-chip {
+            display: flex; align-items: center; gap: 8px;
+            background: rgba(216,176,86,0.08);
+            border: 1px solid rgba(216,176,86,0.35);
+            color: var(--gold-color);
+            padding: 6px 14px 6px 6px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .admin-account-chip:hover { background: rgba(216,176,86,0.16); }
+        .admin-avatar-circle {
+            width: 26px; height: 26px; border-radius: 50%;
+            background: linear-gradient(135deg, #d8b056, #b8860b);
+            color: #111; font-weight: bold; font-size: 0.8rem;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .admin-account-dropdown {
+            position: absolute; top: calc(100% + 8px); right: 0;
+            background: #0d0f13; border: 1px solid rgba(216,176,86,0.3);
+            border-radius: 10px; min-width: 260px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 200; display: none; overflow: hidden;
+        }
+        .admin-account-dropdown.open { display: block; }
+        .admin-account-dropdown-label {
+            padding: 10px 14px 4px; font-size: 0.7rem; color: var(--text-gray);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .admin-account-option {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; cursor: pointer; border: none; background: transparent;
+            width: 100%; text-align: left; color: #eee;
+        }
+        .admin-account-option:hover { background: rgba(216,176,86,0.1); }
+        .admin-account-option.active { background: rgba(216,176,86,0.14); }
+        .admin-account-option .acc-name { display: block; font-size: 0.88rem; color: #f2f2f2; }
+        .admin-account-option .acc-email { display: block; font-size: 0.72rem; color: var(--text-gray); }
+        .admin-account-option .acc-check { margin-left: auto; color: var(--gold-color); }
+        .admin-account-dropdown-divider { height: 1px; background: rgba(216,176,86,0.15); margin: 4px 0; }
+        .admin-account-dropdown-action {
+            display: block; width: 100%; text-align: left; background: transparent; border: none;
+            padding: 10px 14px; color: var(--gold-color); font-size: 0.85rem; cursor: pointer;
+        }
+        .admin-account-dropdown-action:hover { background: rgba(216,176,86,0.1); }
+        .admin-account-dropdown-action.danger { color: #ff8080; }
+        .admin-account-dropdown-action.danger:hover { background: rgba(255,77,77,0.1); }
+
+        .admin-gate, .admin-denied {
+            max-width: 420px;
+            margin: 80px auto;
+            text-align: center;
+            color: #fff;
+        }
+        .admin-gate input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #111;
+            color: #fff;
+        }
+        .admin-gate button, .admin-form button[type="submit"] {
+            background: var(--gold-color);
+            color: #111;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+        }
+        .admin-error { color: #e05252; margin-top: 10px; font-size: 0.9rem; min-height: 20px; }
+
+        .admin-form {
+            background: #111214;
+            border: 1px solid rgba(216,176,86,0.2);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 40px;
+        }
+        .admin-form h2 { color: var(--gold-color); margin-bottom: 18px; font-size: 1.2rem; }
+        .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .admin-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+        .admin-field.full { grid-column: 1 / -1; }
+        .admin-field label { font-size: 0.85rem; color: var(--text-gray); }
+        .admin-field input, .admin-field select, .admin-field textarea {
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #1a1b1d;
+            color: #fff;
+            font-family: var(--font-main);
+        }
+        .admin-field textarea { min-height: 70px; resize: vertical; }
+        .admin-checkbox { flex-direction: row; align-items: center; gap: 8px; }
+        .admin-form-actions { display: flex; gap: 10px; margin-top: 8px; }
+        .admin-form-actions button { width: auto; padding: 10px 22px; }
+        .admin-cancel-btn {
+            background: transparent !important;
+            border: 1px solid #666 !important;
+            color: #ccc !important;
+        }
+
+        /* تاب المحتوى: كل مجموعة (about/faq/policies...) قابلة للطي، وكل نص
+           جواها له عمودين - إنجليزي وعربي (بخط RTL) جنب بعض */
+        .site-content-group {
+            background: #111214;
+            border: 1px solid rgba(216,176,86,0.2);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        .site-content-group summary {
+            padding: 14px 20px;
+            cursor: pointer;
+            color: var(--gold-color);
+            font-weight: 600;
+            list-style: none;
+        }
+        .site-content-group summary::-webkit-details-marker { display: none; }
+        .site-content-group summary::before { content: '▸ '; }
+        .site-content-group[open] summary::before { content: '▾ '; }
+        .site-content-item {
+            padding: 14px 20px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .site-content-item label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-gray);
+            margin-bottom: 8px;
+        }
+        .site-content-item-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .site-content-item-fields textarea {
+            width: 100%;
+            min-height: 70px;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #1a1b1d;
+            color: #fff;
+            font-family: var(--font-main);
+            resize: vertical;
+        }
+        .site-content-item-fields textarea[dir="rtl"] { font-family: 'Tajawal', var(--font-main); }
+        @media (max-width: 700px) {
+            .site-content-item-fields { grid-template-columns: 1fr; }
+        }
+
+        .admin-table-wrap { overflow-x: auto; }
+        table.admin-table { width: 100%; border-collapse: collapse; color: #eee; }
+        table.admin-table th, table.admin-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            text-align: left;
+            font-size: 0.9rem;
+            vertical-align: middle;
+        }
+        table.admin-table th { color: var(--gold-color); font-weight: 600; }
+        table.admin-table img { width: 44px; height: 44px; object-fit: cover; border-radius: 4px; }
+        .admin-badge-yes { color: #34A853; font-weight: 600; }
+        .admin-row-actions { display: flex; gap: 8px; }
+        .admin-row-actions button {
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid #555;
+            background: transparent;
+            color: #ddd;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .admin-row-actions .edit-btn:hover { border-color: var(--gold-color); color: var(--gold-color); }
+        .admin-row-actions .delete-btn:hover { border-color: #e05252; color: #e05252; }
+
+        @media (max-width: 640px) {
+            .admin-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ---- Dashboard section ---- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #111214;
+            border: 1px solid rgba(216,176,86,0.2);
+            border-radius: 8px;
+            padding: 18px;
+            text-align: center;
+        }
+        .stat-card .stat-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--gold-color);
+            display: block;
+            margin-bottom: 4px;
+        }
+        .stat-card .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-gray);
+        }
+        .stat-card-live {
+            border-color: rgba(52,168,83,0.4);
+        }
+        .stat-card-live .stat-value {
+            color: #34A853;
+        }
+
+        /* ---- Date range toolbar ---- */
+        .range-toolbar {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            background: #111214;
+            border: 1px solid rgba(216,176,86,0.2);
+            border-radius: 8px;
+        }
+        .range-granularity {
+            display: flex;
+            gap: 4px;
+            background: #1a1b1d;
+            border-radius: 6px;
+            padding: 3px;
+        }
+        .range-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-gray);
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.82rem;
+        }
+        .range-btn:hover { color: #fff; }
+        .range-btn.active {
+            background: var(--gold-color);
+            color: #111;
+            font-weight: 600;
+        }
+        .range-date-input {
+            background: #1a1b1d;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 0.82rem;
+        }
+        .range-today-btn {
+            background: transparent;
+            border: 1px solid #555;
+            color: #ddd;
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.82rem;
+        }
+        .range-today-btn:hover { border-color: var(--gold-color); color: var(--gold-color); }
+        .range-label {
+            color: var(--gold-color);
+            font-size: 0.82rem;
+            margin-left: auto;
+        }
+        @media (max-width: 640px) {
+            .range-label { margin-left: 0; width: 100%; }
+        }
+        .dashboard-tables {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .dashboard-box {
+            background: #111214;
+            border: 1px solid rgba(216,176,86,0.2);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .dashboard-box h3 {
+            color: var(--gold-color);
+            font-size: 1rem;
+            margin-bottom: 14px;
+        }
+        .mini-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: #eee; }
+        .mini-table td, .mini-table th { padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; }
+        .mini-table th { color: var(--text-gray); font-weight: 500; }
+        .dashboard-note { color: var(--text-gray); font-size: 0.75rem; margin-top: 10px; line-height: 1.5; }
+
+        @media (max-width: 800px) {
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body style="background: var(--bg-dark);">
+
+<!-- ====== 1. بوابة الدخول: بيظهر لحد ما نتأكد إن فيه توكن مسجل ====== -->
+<div id="adminGate" class="admin-gate">
+    <p>Checking access...</p>
+</div>
+
+<!-- ====== 2. رسالة "مش مسموح" لو المستخدم داخل بس مش admin ====== -->
+<div id="adminDenied" class="admin-denied" style="display:none;">
+    <h2 style="color: var(--gold-color); font-family: var(--font-logo);">Access Denied</h2>
+    <p style="color: var(--text-gray); margin-top: 10px;">The account you're logged in with doesn't have admin access.</p>
+    <a href="admin-login.html" style="color: var(--gold-color); display:inline-block; margin-top: 20px;">Switch to an admin account →</a>
+    <br>
+    <a href="index.html" style="color: var(--text-gray); display:inline-block; margin-top: 12px; font-size: 0.85rem;">← Back to Shop</a>
+</div>
+
+<!-- ====== 3. لوحة التحكم نفسها (بتظهر بس بعد التأكد إن المستخدم admin) ====== -->
+<div id="adminPanel" class="admin-wrap" style="display:none;">
+    <div class="admin-header">
+        <h1><svg class="icon-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg> The Sun Book — Admin</h1>
+        <div class="admin-header-actions">
+            <div id="adminAccountChip" class="admin-account-chip" style="display:none;">
+                <span id="adminAccountAvatar" class="admin-avatar-circle">A</span>
+                <span id="adminAccountLabel">Admin</span>
+            </div>
+            <div id="adminAccountDropdown" class="admin-account-dropdown"></div>
+        </div>
+    </div>
+
+    <!-- ====== تابات: منتجات / داشبورد ====== -->
+    <div class="admin-tabs">
+        <button class="admin-tab-btn active" data-tab="products">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+            Products
+        </button>
+        <button class="admin-tab-btn" data-tab="dashboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            Visitors &amp; Stats
+        </button>
+        <button class="admin-tab-btn" data-tab="sessions">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            Sessions
+        </button>
+        <button class="admin-tab-btn" data-tab="users">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            Users
+        </button>
+        <button class="admin-tab-btn" data-tab="promocodes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41L13.42 20.58a2 2 0 0 1-2.83 0L2.59 12.59A2 2 0 0 1 2 11.17V4a2 2 0 0 1 2-2h7.17a2 2 0 0 1 1.42.59l8.01 8a2 2 0 0 1-.01 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+            Promo Codes
+        </button>
+        <button class="admin-tab-btn" data-tab="archives">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg>
+            Archives
+        </button>
+        <button class="admin-tab-btn" data-tab="content">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            Site Content
+        </button>
+    </div>
+
+    <!-- ====== تاب الداشبورد: زوار، طلبات، أرباح ====== -->
+    <div id="tabDashboard" class="admin-tab-panel" style="display:none;">
+        <div class="stats-grid">
+            <div class="stat-card stat-card-live">
+                <span class="stat-value" id="statOnlineNow">—</span>
+                <span class="stat-label">🟢 Online Right Now</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="statUniqueVisitors">—</span>
+                <span class="stat-label">Unique Visitors</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="statPageViews">—</span>
+                <span class="stat-label">Page Views</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="statTotalOrders">—</span>
+                <span class="stat-label">Orders</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="statTotalRevenue">—</span>
+                <span class="stat-label">Total Revenue (LE)</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="statReturningVisitors">—</span>
+                <span class="stat-label">Returning Visitors</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="statNewVisitors">—</span>
+                <span class="stat-label">New Visitors</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="statAvgOrderValue">—</span>
+                <span class="stat-label">Avg Order Value</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="statCartAbandonment">—</span>
+                <span class="stat-label">Cart Abandonment %</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="statAbandonedCount">—</span>
+                <span class="stat-label">Didn't Complete Purchase</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="statOrdersEGP">—</span>
+                <span class="stat-label">Paid in EGP</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="statOrdersEUR">—</span>
+                <span class="stat-label">Paid in EUR</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="statVisitorsEgypt">—</span>
+                <span class="stat-label">Visitors from Egypt</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="statVisitorsAbroad">—</span>
+                <span class="stat-label">Visitors from Abroad</span>
+            </div>
+        </div>
+
+        <div class="dashboard-box" style="margin-bottom: 20px;">
+            <h3>
+                <svg class="icon-gold-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                Revenue
+            </h3>
+            <div class="range-toolbar" id="revenueRangeToolbar">
+                <div class="range-granularity">
+                    <button class="range-btn" data-granularity="day">Day</button>
+                    <button class="range-btn" data-granularity="week">Week</button>
+                    <button class="range-btn active" data-granularity="month">Month</button>
+                    <button class="range-btn" data-granularity="year">Year</button>
+                </div>
+                <input type="date" id="revenueRangeDate" class="range-date-input">
+                <button id="revenueRangeToday" class="range-today-btn">Today</button>
+                <span id="revenueRangeLabel" class="range-label"></span>
+            </div>
+            <canvas id="revenueChart" height="90"></canvas>
+        </div>
+
+        <div class="dashboard-box" style="margin-bottom: 20px;">
+            <h3>
+                <svg class="icon-gold-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                Visits
+            </h3>
+            <div class="range-toolbar" id="visitsRangeToolbar">
+                <div class="range-granularity">
+                    <button class="range-btn" data-granularity="day">Day</button>
+                    <button class="range-btn" data-granularity="week">Week</button>
+                    <button class="range-btn active" data-granularity="month">Month</button>
+                    <button class="range-btn" data-granularity="year">Year</button>
+                </div>
+                <input type="date" id="visitsRangeDate" class="range-date-input">
+                <button id="visitsRangeToday" class="range-today-btn">Today</button>
+                <span id="visitsRangeLabel" class="range-label"></span>
+            </div>
+            <canvas id="visitsChart" height="90"></canvas>
+        </div>
+
+        <div class="dashboard-box" style="margin-bottom: 20px;">
+            <h3>
+                <svg class="icon-gold-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="12" y2="17"></line></svg>
+                Orders
+            </h3>
+            <div class="range-toolbar" id="ordersRangeToolbar">
+                <div class="range-granularity">
+                    <button class="range-btn" data-granularity="day">Day</button>
+                    <button class="range-btn" data-granularity="week">Week</button>
+                    <button class="range-btn active" data-granularity="month">Month</button>
+                    <button class="range-btn" data-granularity="year">Year</button>
+                </div>
+                <input type="date" id="ordersRangeDate" class="range-date-input">
+                <button id="ordersRangeToday" class="range-today-btn">Today</button>
+                <span id="ordersRangeLabel" class="range-label"></span>
+            </div>
+            <canvas id="ordersChart" height="90"></canvas>
+        </div>
+
+        <div class="dashboard-tables">
+            <div class="dashboard-box">
+                <h3><svg class="icon-gold-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg> Top Selling Products</h3>
+                <table class="mini-table">
+                    <thead><tr><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr></thead>
+                    <tbody id="topProductsBody"><tr><td colspan="3">Loading...</td></tr></tbody>
+                </table>
+            </div>
+            <div class="dashboard-box">
+                <h3><svg class="icon-gold-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11.24V7.5a2.5 2.5 0 0 1 5 0v3.74"></path><path d="M18 15V9a6 6 0 0 0-12 0v6"></path><rect x="6" y="15" width="12" height="6" rx="2"></rect></svg> Most Clicked Products (Add to Cart)</h3>
+                <table class="mini-table">
+                    <thead><tr><th>Product</th><th>Clicks</th></tr></thead>
+                    <tbody id="topClickedBody"><tr><td colspan="2">Loading...</td></tr></tbody>
+                </table>
+                <p class="dashboard-note">Shows interest even from people who clicked but didn't complete the purchase.</p>
+            </div>
+            <div class="dashboard-box">
+                <h3><svg class="icon-gold-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg> Most Visited Pages</h3>
+                <table class="mini-table">
+                    <thead><tr><th>Page</th><th>Views</th><th>Visitors</th></tr></thead>
+                    <tbody id="topPagesBody"><tr><td colspan="3">Loading...</td></tr></tbody>
+                </table>
+                <p class="dashboard-note">Shows exactly which page gets the most traffic — homepage, a specific product, checkout, etc.</p>
+            </div>
+            <div class="dashboard-box">
+                <h3><svg class="icon-gold-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg> Visitors by Country</h3>
+                <table class="mini-table">
+                    <thead><tr><th>Country</th><th>Visitors</th></tr></thead>
+                    <tbody id="topCountriesBody"><tr><td colspan="2">Loading...</td></tr></tbody>
+                </table>
+                <p class="dashboard-note">Country is detected automatically by Vercel — no external service used. Values may show "Unknown" while testing locally.</p>
+            </div>
+            <div class="dashboard-box">
+                <h3><svg class="icon-gold-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg> Traffic Sources</h3>
+                <table class="mini-table">
+                    <thead><tr><th>Source</th><th>Visitors</th></tr></thead>
+                    <tbody id="topReferrersBody"><tr><td colspan="2">Loading...</td></tr></tbody>
+                </table>
+                <p class="dashboard-note">"direct" means the visitor typed the link, used a bookmark, or came from Instagram/WhatsApp bio links (which usually hide the source).</p>
+            </div>
+            <div class="dashboard-box">
+                <h3><svg class="icon-gold-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg> Revenue by Type</h3>
+                <table class="mini-table">
+                    <thead><tr><th>Type</th><th>Revenue</th></tr></thead>
+                    <tbody id="revenueByTypeBody"><tr><td colspan="2">Loading...</td></tr></tbody>
+                </table>
+            </div>
+            <div class="dashboard-box">
+                <h3><svg class="icon-gold-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Export Orders</h3>
+                <p class="dashboard-note" style="margin-top:0;">Download every order (customer, items, total, status) as a spreadsheet-ready CSV file.</p>
+                <button id="exportOrdersBtn" class="admin-logout-btn" style="width: 100%; margin-top: 10px;">Download Orders CSV</button>
+            </div>
+            <div class="dashboard-box">
+                <h3><svg class="icon-gold-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Fallback Exchange Rate</h3>
+                <p class="dashboard-note" style="margin-top:0;">Legacy setting from the old Paymob integration (which only accepted EGP). Not used by Kashier since it accepts EUR directly — kept here only for reference on old orders.</p>
+                <div style="display:flex; gap:8px; align-items:center; margin-top:10px;">
+                    <span style="color:var(--text-gray); font-size:0.85rem;">1 EUR =</span>
+                    <input type="number" id="eurToEgpRateInput" step="0.01" min="1" style="flex:1; padding:8px; border-radius:4px; border:1px solid #444; background:#1a1b1d; color:#fff;">
+                    <span style="color:var(--text-gray); font-size:0.85rem;">EGP</span>
+                </div>
+                <button id="saveRateBtn" class="admin-logout-btn" style="width: 100%; margin-top: 10px;">Save Rate</button>
+                <p class="admin-error" id="rateSaveMsg" style="margin-top:6px;"></p>
+            </div>
+        </div>
+
+        <!-- ====== جدول الطلبات المفصّل ====== -->
+        <div class="dashboard-box" style="margin-bottom: 40px;">
+            <h3><svg class="icon-gold-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg> Recent Orders (Detailed)</h3>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Account Name</th>
+                            <th>Buyer Name</th>
+                            <th>Items / Qty</th>
+                            <th>Total</th>
+                            <th>Country</th>
+                            <th>Status</th>
+                            <th>Fulfillment</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailedOrdersBody">
+                        <tr><td colspan="8">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== تاب المنتجات: الفورم + الجدول ====== -->
+    <div id="tabProducts" class="admin-tab-panel">
+    <div class="admin-form">
+        <h2 id="formTitle">Add New Product</h2>
+        <form id="productForm">
+            <input type="hidden" id="productIdField">
+            <div class="admin-grid">
+                <div class="admin-field">
+                    <label>Title</label>
+                    <input type="text" id="fieldTitle" required>
+                </div>
+                <div class="admin-field">
+                    <label>Price (LE)</label>
+                    <input type="number" id="fieldPrice" step="0.01" min="0" required>
+                </div>
+                <div class="admin-field">
+                    <label>Price (EUR) — optional, shown to visitors outside Egypt</label>
+                    <input type="number" id="fieldPriceEUR" step="0.01" min="0" placeholder="leave empty to show LE everywhere">
+                </div>
+                <div class="admin-field">
+                    <label>Image path (in /assets)</label>
+                    <input type="text" id="fieldImage" placeholder="assets/your-real-photo.jpg" required>
+                </div>
+                <div class="admin-field">
+                    <label>Type</label>
+                    <select id="fieldType">
+                        <option value="physical">Physical</option>
+                        <option value="digital">Digital</option>
+                        <option value="both">Both (Physical + Digital)</option>
+                    </select>
+                </div>
+                <div class="admin-field">
+                    <label>Badges (comma separated)</label>
+                    <input type="text" id="fieldBadges" placeholder="Hardcover, English">
+                </div>
+                <div class="admin-field">
+                    <label>Display order</label>
+                    <input type="number" id="fieldOrder" value="0">
+                </div>
+                <div class="admin-field full">
+                    <label>Description (English)</label>
+                    <textarea id="fieldDescription"></textarea>
+                </div>
+                <div class="admin-field full">
+                    <label>Description (Arabic) — optional, leave empty to show the English description in Arabic mode too</label>
+                    <textarea id="fieldDescriptionAr" dir="rtl" style="font-family: 'Tajawal', var(--font-main);"></textarea>
+                </div>
+                <div class="admin-field admin-checkbox">
+                    <input type="checkbox" id="fieldFeatured">
+                    <label for="fieldFeatured" style="margin:0;">Show in "Best Offers"</label>
+                </div>
+                <div class="admin-field admin-checkbox">
+                    <input type="checkbox" id="fieldInStock" checked>
+                    <label for="fieldInStock" style="margin:0;">In stock</label>
+                </div>
+                <div class="admin-field admin-checkbox">
+                    <input type="checkbox" id="fieldEgyptOnly">
+                    <label for="fieldEgyptOnly" style="margin:0;">Available in Egypt only (shows a badge on the product)</label>
+                </div>
+                <div class="admin-field admin-checkbox">
+                    <input type="checkbox" id="fieldTrackStock">
+                    <label for="fieldTrackStock" style="margin:0;">Track actual stock quantity (physical books)</label>
+                </div>
+                <div class="admin-field" id="stockCountWrap" style="display:none;">
+                    <label>Stock Quantity</label>
+                    <input type="number" id="fieldStockCount" min="0" value="0">
+                </div>
+            </div>
+            <div class="admin-form-actions">
+                <button type="submit" id="submitBtn">Add Product</button>
+                <button type="button" class="admin-cancel-btn" id="cancelEditBtn" style="display:none;">Cancel</button>
+            </div>
+            <p class="admin-error" id="formError"></p>
+        </form>
+    </div>
+
+    <div class="admin-table-wrap">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Title</th>
+                    <th>Price</th>
+                    <th>Price (EUR)</th>
+                    <th>Type</th>
+                    <th>Featured</th>
+                    <th>Egypt Only</th>
+                    <th>Stock</th>
+                    <th>Order</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="productsTableBody">
+                <tr><td colspan="10">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    </div>
+
+    <!-- ====== تاب الجلسات: تاريخ/وقت، حالة الدفع، بيانات الطالب ====== -->
+    <div id="tabSessions" class="admin-tab-panel" style="display:none;">
+        <div class="dashboard-box" style="margin-bottom: 20px;">
+            <h3><svg class="icon-gold-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Booked Sessions</h3>
+            <p class="dashboard-note" style="margin-top:0;">Every one-on-one session booking with date, time, payment status, and student info.</p>
+            <button id="exportSessionsBtn" class="admin-logout-btn" style="width: 100%; margin-top: 10px;">Download Sessions CSV</button>
+        </div>
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Date &amp; Time</th>
+                        <th>Student Name</th>
+                        <th>Student Email</th>
+                        <th>Student Phone</th>
+                        <th>Subject</th>
+                        <th>Price</th>
+                        <th>Payment Status</th>
+                        <th>Session Status</th>
+                        <th>Join</th>
+                    </tr>
+                </thead>
+                <tbody id="sessionsTableBody">
+                    <tr><td colspan="9">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ====== تاب المستخدمين: اسم، إيميل، تاريخ التسجيل، عدد الطلبات ====== -->
+    <div id="tabUsers" class="admin-tab-panel" style="display:none;">
+        <div class="dashboard-box" style="margin-bottom: 20px;">
+            <h3><svg class="icon-gold-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg> Registered Users</h3>
+            <p class="dashboard-note" style="margin-top:0;">All accounts registered on the site, with how many orders each one has made.</p>
+            <button id="exportUsersBtn" class="admin-logout-btn" style="width: 100%; margin-top: 10px;">Download Users CSV</button>
+        </div>
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Registered On</th>
+                        <th>Orders Made</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <tr><td colspan="4">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ====== تاب أكواد الخصم: توليد كود بمدة صلاحية محددة ====== -->
+    <div id="tabPromoCodes" class="admin-tab-panel" style="display:none;">
+        <div class="admin-form">
+            <h2>Generate Promo Code</h2>
+            <form id="promoCodeForm">
+                <div class="admin-grid">
+                    <div class="admin-field">
+                        <label>Code (leave empty to auto-generate)</label>
+                        <input type="text" id="promoFieldCode" placeholder="e.g. SUN20">
+                    </div>
+                    <div class="admin-field">
+                        <label>Discount Type</label>
+                        <select id="promoFieldDiscountType">
+                            <option value="percentage">Percentage (%)</option>
+                            <option value="fixed">Fixed Amount (LE)</option>
+                        </select>
+                    </div>
+                    <div class="admin-field">
+                        <label>Discount Value</label>
+                        <input type="number" id="promoFieldDiscountValue" step="0.01" min="0" required placeholder="e.g. 20">
+                    </div>
+                    <div class="admin-field">
+                        <label>Usage Limit (optional)</label>
+                        <input type="number" id="promoFieldUsageLimit" min="1" placeholder="unlimited if empty">
+                    </div>
+                    <div class="admin-field">
+                        <label>Per-User Limit</label>
+                        <input type="number" id="promoFieldPerUserLimit" min="1" value="1">
+                    </div>
+                    <div class="admin-field">
+                        <label>Valid For</label>
+                        <input type="number" id="promoFieldDurationAmount" min="1" value="1" required>
+                    </div>
+                    <div class="admin-field">
+                        <label>Duration Unit</label>
+                        <select id="promoFieldDurationUnit">
+                            <option value="hours">Hours</option>
+                            <option value="days" selected>Days</option>
+                            <option value="weeks">Weeks</option>
+                            <option value="months">Months</option>
+                            <option value="years">Years</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="admin-form-actions">
+                    <button type="submit" id="promoSubmitBtn">Generate Code</button>
+                </div>
+                <p class="admin-error" id="promoFormError"></p>
+            </form>
+        </div>
+
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Discount</th>
+                        <th>Usage</th>
+                        <th>Expires</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="promoCodesTableBody">
+                    <tr><td colspan="6">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ====== تاب الأرشيف الشهري: ملخص كل شهر بصيغة PDF فيه رسوم بيانية، من غير ما تمسح أي بيانات أصلية ====== -->
+    <div id="tabArchives" class="admin-tab-panel" style="display:none;">
+        <div class="admin-form">
+            <h2>Monthly Archives</h2>
+            <p style="color: var(--text-gray); font-size: 0.85rem; margin-top: -10px; margin-bottom: 16px;">
+                A downloadable PDF summary for each month (revenue, orders, sessions, charts). This doesn't delete or touch your original data — it's just a snapshot report.
+            </p>
+        </div>
+        <div id="archivesListWrap" class="admin-table-wrap" style="padding: 10px;">
+            <p style="color: var(--text-gray); padding: 16px;">Loading...</p>
+        </div>
+    </div>
+
+    <!-- ====== تاب المحتوى: النصوص الطويلة القابلة للتعديل بالعربي والإنجليزي
+         (الأسئلة الشائعة، السياسات، قصة الموقع، نص صفحة الجلسة) - من غير
+         ما نحتاج ديبلوي جديد كل مرة حد يحب يعدّل كلمة ====== -->
+    <div id="tabSiteContent" class="admin-tab-panel" style="display:none;">
+        <div class="admin-form">
+            <h2>Site Content (English &amp; Arabic)</h2>
+            <p style="color: var(--text-gray); font-size: 0.85rem; margin-top: -10px; margin-bottom: 16px;">
+                Edit the long-form text shown on the About, FAQ, Policies, and Booking Details pages — in both languages. Technical labels and error messages elsewhere on the site aren't editable here on purpose.
+            </p>
+            <div class="admin-form-actions" style="margin-bottom: 4px;">
+                <button type="button" id="siteContentSaveBtn">Save All Changes</button>
+            </div>
+            <p class="admin-error" id="siteContentMsg" style="min-height: 18px;"></p>
+        </div>
+
+        <div id="siteContentGroups">
+            <p style="color: var(--text-gray); padding: 16px;">Loading...</p>
+        </div>
+    </div>
+</div>
+
+<!-- عشان نقدر نبني PDF فيه رسوم بيانية للأرشيف الشهري من غير سيرفر تخزين ملفات -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="js/api.js"></script>
+<script src="js/admin-accounts.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
