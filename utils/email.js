@@ -57,7 +57,7 @@ function renderItemsTable(items) {
   return `<table style="width:100%; border-collapse: collapse; margin: 16px 0;">${rows}</table>`;
 }
 
-async function dispatchEmail({ to, subject, html }) {
+async function dispatchEmail({ to, subject, html, replyTo }) {
   if (!isEmailConfigured()) {
     console.log(`[email disabled] "${subject}" for ${to} was not sent (SMTP not configured).`);
     return { sent: false, reason: 'SMTP not configured' };
@@ -67,10 +67,21 @@ async function dispatchEmail({ to, subject, html }) {
   await transporter.sendMail({
     from: `"The Sun Book" <${fromAddress}>`,
     to,
+    ...(replyTo && { replyTo }),
     subject,
     html,
   });
   return { sent: true };
+}
+
+// بيمنع أي حروف HTML جاية من العميل (اسم/إيميل/موضوع/رسالة) إنها "تنكسر" جوه قالب الإيميل
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // @param resetUrl الرابط الكامل اللي هيودّي المستخدم لصفحة إعادة تعيين الباسورد مع التوكن
@@ -278,6 +289,24 @@ async function sendBookingRescheduledEmail(booking) {
   return dispatchEmail({ to: booking.studentEmail, subject: 'Session Rescheduled - The Sun Book', html });
 }
 
+// ─── رسالة نموذج "تواصل معنا" في الموقع - بتوصل مباشرة لإيميل صاحب الموقع (thesunbook7@gmail.com) ───
+// ممكن تتغير من غير ما نلمس الكود، لو حبيت، بمتغير بيئة CONTACT_EMAIL في الـ .env
+async function sendContactMessageEmail({ name, email, subject, message }) {
+  const to = process.env.CONTACT_EMAIL || 'thesunbook7@gmail.com';
+  const html = renderEmailShell({
+    heading: 'New Contact Form Message ✉️',
+    bodyHtml: `
+      <p style="color:#e8e8e8; line-height:1.6; margin:0 0 6px;"><strong>From:</strong> ${escapeHtml(name)}</p>
+      <p style="color:#e8e8e8; line-height:1.6; margin:0 0 6px;"><strong>Email:</strong> ${escapeHtml(email)}</p>
+      <p style="color:#e8e8e8; line-height:1.6; margin:0 0 20px;"><strong>Subject:</strong> ${escapeHtml(subject)}</p>
+      <p style="color:#c9c9c9; line-height:1.6; margin:0; white-space:pre-wrap;">${escapeHtml(message)}</p>
+    `,
+    footerNote: 'The Sun Book — Contact Form',
+  });
+  // replyTo بإيميل العميل نفسه، عشان لو ضغطت "Reply" من الجيميل بيرد عليه هو مباشرة
+  return dispatchEmail({ to, subject: `Contact Form: ${subject}`, html, replyTo: email });
+}
+
 module.exports = {
   isEmailConfigured,
   sendPasswordResetEmail,
@@ -290,4 +319,5 @@ module.exports = {
   sendBookingCancelledEmail,
   sendSessionMissedEmail,
   sendBookingRescheduledEmail,
+  sendContactMessageEmail,
 };

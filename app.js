@@ -40,6 +40,12 @@ const authLimiter = rateLimit({
   message: { success: false, message: 'Too many login attempts. Try again later.' },
 });
 
+const contactLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { success: false, message: 'Too many messages sent. Please try again later.' },
+});
+
 app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
 app.use('/api/bookings', require('./routes/bookingRoutes'));
 app.use('/api/sessions', require('./routes/sessionRoutes'));
@@ -54,6 +60,7 @@ app.use('/api/reports', require('./routes/reportRoutes'));
 app.use('/api/maintenance', require('./routes/maintenanceRoutes'));
 app.use('/api/reviews', require('./routes/reviewRoutes'));
 app.use('/api/site-content', require('./routes/siteContentRoutes'));
+app.use('/api/contact', contactLimiter, require('./routes/contactRoutes'));
 
 app.get('/', (req, res) => {
   res.send('Sunbook API is running...');
