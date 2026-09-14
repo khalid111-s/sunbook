@@ -165,7 +165,7 @@ const createBooking = async (req, res) => {
     subject: subject || 'Exclusive One-on-One Session',
     date: bookingDate,
     duration: duration || 30,
-    price: price || 199,
+    price: price || 1300,
     paymentMethod: paymentMethod || 'card',
     notes,
     status: 'pending',
