@@ -36,6 +36,9 @@ const orderSchema = new mongoose.Schema(
     chargedAmountEGP: { type: Number, default: null },
     // بنمنع بيه إرسال إيميل التأكيد أكتر من مرة (ممكن الطلب يترفع "paid" من أكتر مصدر - webhook أو فحص مباشر)
     confirmationEmailSent: { type: Boolean, default: false },
+    // طريقة الدفع اللي العميل اختارها: card (فيزا) / wallet (محفظة) أونلاين، أو cod (كاش عند الاستلام).
+    // الكاش عند الاستلام بيفضل "pending" لحد ما الأدمن يحدّد إن الطلب اتسلّم (وقتها بيتحوّل "paid").
+    paymentMethod: { type: String, enum: ['card', 'wallet', 'cod'], default: 'card' },
     status: {
       type: String,
       enum: ['pending', 'paid', 'cancelled'],

@@ -28,15 +28,50 @@ const markOrderPaidAndNotify = async (order) => {
   }
 };
 
+// إيميل التأكيد + تنبيه الأدمن لطلب جديد (بدون تغيير حالة الدفع) - بيُستخدم مع الكاش عند الاستلام
+const notifyNewOrder = async (order) => {
+  if (order.confirmationEmailSent) return;
+  order.confirmationEmailSent = true;
+  await order.save();
+  try {
+    await sendOrderConfirmationEmail(order);
+  } catch (err) {
+    console.error('Order confirmation email failed:', err.message);
+  }
+  try {
+    await sendNewOrderAdminAlert(order);
+  } catch (err) {
+    console.error('Admin order alert email failed:', err.message);
+  }
+};
+
+const PAYMENT_METHODS = ['card', 'wallet', 'cod'];
+
 // @desc    Create an order (called from checkout after a purchase is completed)
 // @route   POST /api/orders
 // @access  Private (must be logged in - checkout already requires it)
 const createOrder = async (req, res) => {
   const { customerName, phone, address, governorate, items, totalAmount, currency, promoCode } = req.body;
+  const paymentMethod = PAYMENT_METHODS.includes(req.body.paymentMethod) ? req.body.paymentMethod : 'card';
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     res.status(400);
     throw new Error('Order must include at least one item');
+  }
+
+  // --- الكاش عند الاستلام متاح بس لو كل الطلب كتب فيزيكال ---
+  // أي حاجة رقمية (PDF أو نسخة 'both') بتتسلّم فورًا، فمينفعش تتسلّم قبل ما العميل يدفع.
+  // وبرضو لازم عنوان وتليفون عشان المندوب يوصل للعميل.
+  if (paymentMethod === 'cod') {
+    const allPhysical = items.every((i) => i.type === 'physical');
+    if (!allPhysical) {
+      res.status(400);
+      throw new Error('Cash on delivery is only available for orders that contain physical books only');
+    }
+    if (!address || !String(address).trim() || !phone || !String(phone).trim()) {
+      res.status(400);
+      throw new Error('Address and phone number are required for cash on delivery orders');
+    }
   }
 
   // --- التحقق من توفر المخزون للكتب الفيزيكال اللي بيتتبّع مخزونها فعليًا، قبل ما نأكد الطلب ---
@@ -110,6 +145,7 @@ const createOrder = async (req, res) => {
     promoCode: appliedPromoCode,
     discountAmount,
     currency: orderCurrency,
+    paymentMethod,
     country: req.headers['x-vercel-ip-country'] || 'Unknown',
   });
 
@@ -123,7 +159,12 @@ const createOrder = async (req, res) => {
   // لما تضيف بوابة دفع جديدة، هنا بالظبط المكان اللي هيتحط فيه استدعاء إنشاء معاملة الدفع
   // (زي ما كان شكل كود فواتيرك قبل كده)، وهيتشال السطر اللي تحت وقتها.
   const paymentUrl = null;
-  await markOrderPaidAndNotify(order);
+  if (paymentMethod === 'cod') {
+    // كاش عند الاستلام: الطلب بيفضل "pending" لحد ما الفلوس تتحصّل عند التسليم
+    await notifyNewOrder(order);
+  } else {
+    await markOrderPaidAndNotify(order);
+  }
 
   res.status(201).json({ success: true, data: { order, paymentUrl } });
 };
@@ -210,16 +251,19 @@ const updateOrderFulfillment = async (req, res) => {
     throw new Error('Invalid fulfillment status');
   }
 
-  const order = await Order.findByIdAndUpdate(
-    req.params.id,
-    { fulfillmentStatus },
-    { new: true }
-  );
+  const order = await Order.findById(req.params.id);
 
   if (!order) {
     res.status(404);
     throw new Error('Order not found');
   }
+
+  order.fulfillmentStatus = fulfillmentStatus;
+  // الكاش عند الاستلام: لما الأدمن يحدّد "delivered" ده معناه إن الفلوس اتحصّلت، فنحوّله "paid"
+  if (fulfillmentStatus === 'delivered' && order.paymentMethod === 'cod' && order.status === 'pending') {
+    order.status = 'paid';
+  }
+  await order.save();
 
   res.json({ success: true, data: order });
 };

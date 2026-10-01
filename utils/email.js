@@ -119,6 +119,7 @@ async function sendOrderConfirmationEmail(order) {
       ${renderItemsTable(order.items)}
       ${order.discountAmount > 0 ? `<p style="color:#34A853; text-align:right; margin: 4px 0;">Discount (${order.promoCode}): -LE ${Number(order.discountAmount).toFixed(2)}</p>` : ''}
       <p style="color:#d8b056; text-align:right; font-weight:bold; font-size:1.1rem; margin: 12px 0 0;">Total: LE ${Number(order.totalAmount).toFixed(2)}</p>
+      ${order.paymentMethod === 'cod' ? '<p style="color:#c9c9c9; text-align:right; margin: 6px 0 0;">Payment: Cash on delivery — please have the exact amount ready when your order arrives.</p>' : ''}
       <p style="color:#888; font-size:0.85rem; line-height:1.6; margin: 28px 0 0;">
         You can track your order status anytime from your profile page.
       </p>
