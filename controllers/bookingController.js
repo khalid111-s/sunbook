@@ -64,11 +64,20 @@ const markBookingPaidAndNotify = async (booking, studentUser) => {
 // المواعيد الثابتة المتاحة كل يوم (وقت القاهرة)
 const DAILY_SLOTS = ['4:00 PM', '6:00 PM', '8:00 PM'];
 
+// حجز لسه "pending" بعد 30 دقيقة معناه إن الدفع ما اتكملش - بنلغيه عشان الميعاد يرجع متاح
+const PENDING_HOLD_MINUTES = 30;
+const releaseStalePendingBookings = () =>
+  Booking.updateMany(
+    { status: 'pending', createdAt: { $lt: new Date(Date.now() - PENDING_HOLD_MINUTES * 60 * 1000) } },
+    { status: 'cancelled', cancellationReason: 'Payment was not completed' }
+  );
+
 // @desc    Returns which dates in a given month are fully booked (all 3 slots taken),
 //          so the calendar can grey them out without checking each day one by one.
 // @route   GET /api/bookings/availability-month?year=YYYY&month=MM
 // @access  Public
 const getMonthAvailability = async (req, res) => {
+  await releaseStalePendingBookings();
   const { year, month } = req.query; // month: 1-12
   if (!year || !month) {
     res.status(400);
@@ -100,6 +109,7 @@ const getMonthAvailability = async (req, res) => {
 // @route   GET /api/bookings/availability?date=YYYY-MM-DD
 // @access  Public
 const getAvailability = async (req, res) => {
+  await releaseStalePendingBookings();
   const { date } = req.query;
   if (!date) {
     res.status(400);
@@ -125,6 +135,7 @@ const getAvailability = async (req, res) => {
 };
 
 const createBooking = async (req, res) => {
+  await releaseStalePendingBookings();
   const { teacherId, subject, date, duration, price, paymentMethod, notes } = req.body;
 
   const teacher = await User.findById(teacherId);
@@ -155,6 +166,10 @@ const createBooking = async (req, res) => {
   });
 
   if (existingBooking) {
+    // نفس الطالب ضغط تاني على نفس الميعاد وهو لسه ما دفعش: بنرجّعله نفس الحجز المعلّق بدل ما نرفضه
+    if (existingBooking.status === 'pending' && String(existingBooking.student) === String(req.user._id)) {
+      return res.status(200).json({ success: true, data: { booking: existingBooking } });
+    }
     res.status(400);
     throw new Error('This time slot is already booked');
   }
@@ -171,14 +186,10 @@ const createBooking = async (req, res) => {
     status: 'pending',
   });
 
-  // --- مفيش بوابة دفع متصلة حاليًا (اتشالت فواتيرك) ---
-  // بشكل مؤقت لحد ما تتحدد بوابة دفع جديدة، أي حجز بيتأكد وتتعمل جلسته تلقائيًا فور إنشاءه.
-  const paymentUrl = null;
-  await markBookingPaidAndNotify(booking, req.user);
-
+  // الحجز بيفضل "pending" لحد ما Geidea تأكد الدفع فعليًا (من /api/payments/...)
   res.status(201).json({
     success: true,
-    data: { booking, paymentUrl },
+    data: { booking },
   });
 };
 

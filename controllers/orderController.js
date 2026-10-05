@@ -154,19 +154,14 @@ const createOrder = async (req, res) => {
     await Product.findByIdAndUpdate(update.id, { $inc: { stockCount: -update.qty } });
   }
 
-  // --- مفيش بوابة دفع متصلة حاليًا (اتشالت فواتيرك) ---
-  // بشكل مؤقت لحد ما تتحدد بوابة دفع جديدة، أي طلب بيتحط "مدفوع" تلقائيًا فور إنشاءه.
-  // لما تضيف بوابة دفع جديدة، هنا بالظبط المكان اللي هيتحط فيه استدعاء إنشاء معاملة الدفع
-  // (زي ما كان شكل كود فواتيرك قبل كده)، وهيتشال السطر اللي تحت وقتها.
-  const paymentUrl = null;
+  // الدفع الأونلاين: الطلب بيفضل "pending" لحد ما Geidea تأكد الدفع فعليًا
+  // (من /api/payments/session ثم /api/payments/:id/confirm أو الـ callback).
+  // الكاش عند الاستلام: بيفضل "pending" لحد ما الفلوس تتحصّل عند التسليم.
   if (paymentMethod === 'cod') {
-    // كاش عند الاستلام: الطلب بيفضل "pending" لحد ما الفلوس تتحصّل عند التسليم
     await notifyNewOrder(order);
-  } else {
-    await markOrderPaidAndNotify(order);
   }
 
-  res.status(201).json({ success: true, data: { order, paymentUrl } });
+  res.status(201).json({ success: true, data: { order } });
 };
 
 // @desc    Customer cancels their own physical order and gets a refund - only allowed while
